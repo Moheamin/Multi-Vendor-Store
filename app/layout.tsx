@@ -1,6 +1,5 @@
-import Footer from "./_components/ui/Footer";
-import Header from "./_components/ui/Header";
-import { ThemeProvider } from "./_components/theme-provider";
+import Header from "./_components/ui/app/Header";
+import { ThemeProvider } from "./_lib/theme-provider";
 import "./styles/globals.css";
 
 export default function RootLayout({
@@ -19,7 +18,6 @@ export default function RootLayout({
         >
           <Header />
           {children}
-          <Footer />
         </ThemeProvider>
       </body>
     </html>

@@ -3,22 +3,20 @@
 import * as React from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
 export function ModeToggle() {
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Prevent hydration mismatch by waiting for mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) {
-    // Render a placeholder with the same dimensions to prevent layout shift
     return (
-      <div className="w-10 h-10 p-2.5 rounded-lg bg-gray-100 dark:bg-[#2a2a2a]" />
+      <div className="w-10 h-10 p-2.5 rounded-lg bg-[var(--marketplace-bg)] border border-[var(--border)]" />
     );
   }
 
@@ -29,16 +27,24 @@ export function ModeToggle() {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className={`p-2.5 rounded-lg transition-all 
-        /* Light Mode Styles */
-        bg-gray-100 text-[var(--marketplace-accent)] hover:bg-gray-200
-        /* Dark Mode Styles */
-        dark:bg-[#2a2a2a] dark:text-[var(--marketplace-accent)] dark:hover:bg-[#323232]
-      `}
+      className="p-2.5 rounded-lg transition-all border border-[var(--border)]
+        /* Theme aware backgrounds */
+        bg-[var(--marketplace-bg)] hover:bg-[var(--marketplace-card-hover)]
+        text-[var(--marketplace-accent)] shadow-sm
+      "
       title={isDark ? "الوضع النهاري" : "الوضع الليلي"}
     >
-      {/* We use absolute positioning to swap icons smoothly or just conditional rendering */}
-      {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={isDark ? "dark" : "light"}
+          initial={{ y: -10, opacity: 0, rotate: 45 }}
+          animate={{ y: 0, opacity: 1, rotate: 0 }}
+          exit={{ y: 10, opacity: 0, rotate: -45 }}
+          transition={{ duration: 0.2 }}
+        >
+          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </motion.div>
+      </AnimatePresence>
       <span className="sr-only">Toggle theme</span>
     </motion.button>
   );

@@ -1,13 +1,11 @@
-import { Hero } from "@/app/_components/ui/Hero";
+import Main from "@/app/_components/ui/app/Main";
+
 import "./styles/globals.css";
+
 export default function Home() {
   return (
-    <main>
-      <Hero />
-      {/* <About/>
-      <Services/>
-      <Contact/>
-      <Footer/> */}
+    <main dir="rtl">
+      <Main />
     </main>
   );
 }
