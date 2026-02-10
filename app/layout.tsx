@@ -1,4 +1,4 @@
-import Header from "./_components/ui/app/Header";
+import Header from "@/app/_components/content/Header";
 import { ThemeProvider } from "./_lib/theme-provider";
 import "./styles/globals.css";
 
@@ -8,7 +8,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar">
+    <html lang="ar" suppressHydrationWarning>
       <body>
         <ThemeProvider
           attribute="class"

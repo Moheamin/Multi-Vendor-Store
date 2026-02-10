@@ -3,42 +3,19 @@
 import { motion } from "motion/react";
 import { SearchBar } from "../reuseable/SearchBar";
 import { Filters } from "../reuseable/Filters";
-import { StoreCard } from "./store/StoreCard";
+import { StoreCard } from "../ui/store/StoreCard";
 import { useState } from "react";
-import { mockStores, mockProducts, categories } from "@/app/_lib/Dummy";
-import { StorePage } from "./store/StorePage";
-import { ProductModal } from "./product/ProductModal";
+import { mockStores, categories } from "@/app/_lib/Dummy";
 import { Hero } from "./Hero";
 import Footer from "./Footer";
+import Link from "next/link"; // Import Link for routing
 
 export default function Main() {
-  const [currentView, setCurrentView] = useState<"home" | "store" | "admin">(
-    "home",
-  );
-  const [selectedStore, setSelectedStore] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [activeCategory, setActiveCategory] = useState("all");
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
-  const handleStoreClick = (store: any) => {
-    setSelectedStore(store);
-    setCurrentView("store");
-  };
-
-  const handleProductClick = (product: any) => {
-    setSelectedProduct(product);
-    setIsProductModalOpen(true);
-  };
-
-  const handleBackToHome = () => {
-    setCurrentView("home");
-    setSelectedStore(null);
-    setSelectedProduct(null);
-    setIsProductModalOpen(false);
-  };
-
+  // Filter and Sort Logic (Keep this here)
   const filteredStores = mockStores.filter((store) => {
     const matchesSearch =
       store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -53,34 +30,6 @@ export default function Main() {
     if (!a.isFeatured && b.isFeatured) return 1;
     return 0;
   });
-
-  // if (currentView === "admin") {
-  //   return (
-  //     <AdminDashboard
-  //       onBack={handleBackToHome}
-  //       isDark={isDark}
-  //       onToggleTheme={toggleTheme}
-  //     />
-  //   );
-  // }
-
-  if (currentView === "store" && selectedStore) {
-    return (
-      <>
-        <StorePage
-          store={selectedStore}
-          products={mockProducts[selectedStore.id] || []}
-          onBack={handleBackToHome}
-          onProductClick={handleProductClick}
-        />
-        <ProductModal
-          product={selectedProduct}
-          isOpen={isProductModalOpen}
-          onClose={() => setIsProductModalOpen(false)}
-        />
-      </>
-    );
-  }
 
   return (
     <>
@@ -112,20 +61,17 @@ export default function Main() {
 
           {/* Stores Grid Section */}
           <section>
-            {/* 2. Mirrored Header: Text aligned right, counter appears to the left of the title */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold text-[var(--marketplace-text-primary)] tracking-tight text-right flex items-center">
                 {activeCategory === "all"
                   ? "جميع المتاجر"
                   : `متاجر ${activeCategory}`}
-                {/* ml-3 changed to mr-3 for proper RTL spacing between title and count */}
                 <span className="text-[var(--marketplace-text-secondary)] mr-3 text-lg font-normal">
                   ({sortedStores.length})
                 </span>
               </h2>
             </div>
 
-            {/* 3. Grid Flow: RTL ensures the first store appears on the top-right */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {sortedStores.map((store, index) => (
                 <motion.div
@@ -139,15 +85,15 @@ export default function Main() {
                     ease: "easeOut",
                   }}
                 >
-                  <StoreCard
-                    store={store}
-                    onClick={() => handleStoreClick(store)}
-                  />
+                  {/* WRAP StoreCard with Link */}
+                  <Link href={`/store/${store.id}`}>
+                    <StoreCard store={store} />
+                  </Link>
                 </motion.div>
               ))}
             </div>
 
-            {/* Empty State - Centered as per Arabic design */}
+            {/* Empty State */}
             {sortedStores.length === 0 && (
               <motion.div
                 initial={{ opacity: 0 }}

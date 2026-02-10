@@ -41,11 +41,33 @@ export function Hero() {
         </p>
 
         <motion.button
-          onClick={() =>
-            document
-              .getElementById("stores")
-              ?.scrollIntoView({ behavior: "smooth" })
-          }
+          onClick={() => {
+            const element = document.getElementById("stores");
+            if (element) {
+              const targetPosition =
+                element.getBoundingClientRect().top + window.scrollY;
+              const startPosition = window.scrollY;
+              const duration = 50; // Duration in milliseconds (adjust this value)
+
+              const startTime = performance.now();
+
+              const scroll = (currentTime: number) => {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                window.scrollTo(
+                  0,
+                  startPosition + (targetPosition - startPosition) * progress,
+                );
+
+                if (progress < 1) {
+                  requestAnimationFrame(scroll);
+                }
+              };
+
+              requestAnimationFrame(scroll);
+            }
+          }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="inline-flex items-center gap-2 px-8 py-4 bg-[var(--marketplace-accent)] text-white rounded-xl font-bold shadow-lg shadow-[var(--marketplace-accent)]/20 hover:bg-[#00d4e8] transition-all mb-16"

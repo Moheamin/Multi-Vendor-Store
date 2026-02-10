@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Badge } from "@/app/_components/ui/shadCN-ui/badge";
+import { Badge } from "@/app/_components/shadCN-ui/badge";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
@@ -14,10 +14,9 @@ interface StoreCardProps {
     logo?: string;
     isFeatured?: boolean;
   };
-  onClick: () => void;
 }
 
-export function StoreCard({ store, onClick }: StoreCardProps) {
+export function StoreCard({ store }: StoreCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -27,7 +26,6 @@ export function StoreCard({ store, onClick }: StoreCardProps) {
       transition={{ duration: 0.2 }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      onClick={onClick}
       className={`relative bg-[var(--marketplace-card-bg)] rounded-xl overflow-hidden cursor-pointer group border transition-all duration-300 ${
         store.isFeatured
           ? "border-[var(--marketplace-accent)]/40 hover:border-[var(--marketplace-accent)] shadow-lg shadow-[var(--marketplace-accent)]/5"

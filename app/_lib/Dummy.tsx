@@ -1,3 +1,181 @@
+import { Users, Store as StoreIcon, Package, DollarSign } from "lucide-react";
+import {
+  Stat,
+  User,
+  Store,
+  Product,
+  RevenueData,
+} from "@/app/_components/ui/dashboard/types";
+
+export const statsData: Stat[] = [
+  {
+    label: "إجمالي المستخدمين",
+    value: "1,234",
+    icon: Users,
+    change: "+12.5%",
+    trend: "up",
+    color: "#00bcd4",
+  },
+  {
+    label: "المتاجر النشطة",
+    value: "56",
+    icon: StoreIcon,
+    change: "+8.2%",
+    trend: "up",
+    color: "#4caf50",
+  },
+  {
+    label: "المنتجات",
+    value: "892",
+    icon: Package,
+    change: "+15.7%",
+    trend: "up",
+    color: "#ff9800",
+  },
+  {
+    label: "الإيرادات",
+    value: "45.2 ألف $",
+    icon: DollarSign,
+    change: "+23.1%",
+    trend: "up",
+    color: "#e91e63",
+  },
+];
+
+export const usersData: User[] = [
+  {
+    id: 1,
+    name: "أحمد محمد",
+    email: "ahmad@example.com",
+    role: "مشتري",
+    status: "نشط",
+    joined: "2026-01-15",
+  },
+  {
+    id: 2,
+    name: "فاطمة علي",
+    email: "fatima@example.com",
+    role: "تاجر",
+    status: "نشط",
+    joined: "2026-01-14",
+  },
+  {
+    id: 3,
+    name: "محمود حسن",
+    email: "mahmoud@example.com",
+    role: "مشتري",
+    status: "غير نشط",
+    joined: "2026-01-10",
+  },
+  {
+    id: 4,
+    name: "سارة خالد",
+    email: "sara@example.com",
+    role: "تاجر",
+    status: "نشط",
+    joined: "2026-01-08",
+  },
+  {
+    id: 5,
+    name: "عمر يوسف",
+    email: "omar@example.com",
+    role: "مشتري",
+    status: "نشط",
+    joined: "2026-01-05",
+  },
+];
+
+export const storesData: Store[] = [
+  {
+    id: 1,
+    name: "الإلكترونيات المميزة",
+    dealer: "فاطمة علي",
+    products: 45,
+    revenue: "12.5 ألف $",
+    status: "نشط",
+  },
+  {
+    id: 2,
+    name: "مركز الأزياء",
+    dealer: "سارة خالد",
+    products: 78,
+    revenue: "8.2 ألف $",
+    status: "نشط",
+  },
+  {
+    id: 3,
+    name: "المنزل والحديقة",
+    dealer: "محمد أحمد",
+    products: 34,
+    revenue: "5.8 ألف $",
+    status: "قيد المراجعة",
+  },
+  {
+    id: 4,
+    name: "الرياضة واللياقة",
+    dealer: "علي حسين",
+    products: 56,
+    revenue: "9.3 ألف $",
+    status: "نشط",
+  },
+];
+
+export const productsData: Product[] = [
+  {
+    id: 1,
+    name: "سماعات لاسلكية متميزة",
+    store: "الإلكترونيات المميزة",
+    category: "صوت",
+    price: "299.99 $",
+    stock: 45,
+    status: "متوفر",
+  },
+  {
+    id: 2,
+    name: "ساعة ذكية برو",
+    store: "الإلكترونيات المميزة",
+    category: "أجهزة قابلة للارتداء",
+    price: "449.99 $",
+    stock: 23,
+    status: "متوفر",
+  },
+  {
+    id: 3,
+    name: "سترة مصممة",
+    store: "مركز الأزياء",
+    category: "ملابس",
+    price: "189.99 $",
+    stock: 12,
+    status: "مخزون منخفض",
+  },
+  {
+    id: 4,
+    name: "سجادة يوغا برو",
+    store: "الرياضة واللياقة",
+    category: "لياقة",
+    price: "49.99 $",
+    stock: 0,
+    status: "نفذ المخزون",
+  },
+  {
+    id: 5,
+    name: "لابتوب فائق النحافة",
+    store: "الإلكترونيات المميزة",
+    category: "أجهزة كمبيوتر",
+    price: "1299.99 $",
+    stock: 8,
+    status: "مخزون منخفض",
+  },
+];
+
+export const revenueData: RevenueData[] = [
+  { month: "يناير", revenue: 32500, orders: 145, growth: 12.5 },
+  { month: "فبراير", revenue: 38200, orders: 167, growth: 17.5 },
+  { month: "مارس", revenue: 42100, orders: 182, growth: 10.2 },
+  { month: "أبريل", revenue: 39800, orders: 171, growth: -5.5 },
+  { month: "مايو", revenue: 45200, orders: 195, growth: 13.6 },
+];
+
 export const mockStores = [
   {
     id: "admin",
