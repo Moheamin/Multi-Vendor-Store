@@ -1,4 +1,10 @@
-export type TabType = "overview" | "users" | "stores" | "products" | "revenue";
+export type TabType =
+  | "overview"
+  | "users"
+  | "stores"
+  | "products"
+  | "revenue"
+  | "requests";
 
 export interface User {
   id: number;
@@ -42,4 +48,13 @@ export interface RevenueData {
   revenue: number;
   orders: number;
   growth: number;
+}
+
+export interface Request {
+  id: number;
+  store: string;
+  product: string;
+  quantity: number;
+  status: string;
+  date: string;
 }

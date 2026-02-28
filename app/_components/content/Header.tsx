@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShieldCheck, Store, User, LogIn } from "lucide-react";
+import { ShieldCheck, Store, User, LogIn, Clock } from "lucide-react";
 import { motion } from "motion/react";
 import { ModeToggle } from "@/app/_lib/ModeToggle";
 import { supabase } from "@/app/_lib/supabase";
@@ -30,29 +30,61 @@ export default function Header() {
 
   useEffect(() => {
     fetchUserData();
-
-    // الاستماع لأي تغيير في حالة تسجيل الدخول أو التحديثات
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(() => {
       fetchUserData();
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
+  // Updated Logic to handle Admin, Guest (Pending Dealer), and Buyer
   const config = (() => {
-    if (!user) return { href: "/login", label: "تسجيل الدخول", icon: LogIn };
-    const role = user.user_metadata?.role || "user";
-    if (role === "super_admin")
-      return { href: "/dashboard", label: "لوحة الإدارة", icon: ShieldCheck };
-    if (role === "dealer")
+    if (!user)
       return {
-        href: `/store/${user.user_metadata?.store_slug || ""}`,
+        href: "/login",
+        label: "تسجيل الدخول",
+        icon: LogIn,
+        type: "login",
+      };
+
+    const role = profile?.role || "buyer";
+
+    if (role === "admin") {
+      return {
+        href: "/dashboard",
+        label: "لوحة الإدارة",
+        icon: ShieldCheck,
+        type: "admin",
+      };
+    }
+
+    // A guest is a dealer who hasn't been accepted yet
+    if (role === "guest") {
+      return {
+        href: "#",
+        label: "طلبك قيد المراجعة",
+        icon: Clock,
+        type: "guest",
+      };
+    }
+
+    if (role === "seller") {
+      return {
+        href: `/store/${profile?.store_slug || ""}`,
         label: "متجري",
         icon: Store,
+        type: "seller",
       };
-    return { href: "/profile", label: "الملف الشخصي", icon: User };
+    }
+
+    // Default: Buyer
+    return {
+      href: "/profile",
+      label: "الملف الشخصي",
+      icon: User,
+      type: "buyer",
+    };
   })();
 
   return (
@@ -64,11 +96,11 @@ export default function Header() {
         <Link href="/">
           <div className="flex items-center gap-3 cursor-pointer group">
             <div className="w-10 h-10 bg-gradient-to-br from-marketplace-accent to-[#0097a7] rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm">
-              س
+              L
             </div>
             <div className="hidden sm:block">
               <h1 className="text-xl font-bold text-marketplace-text-primary group-hover:text-marketplace-accent transition-colors">
-                السوق الإلكتروني
+                لنك الصناعة
               </h1>
               <p className="text-[10px] text-marketplace-text-secondary">
                 سوق المتاجر
@@ -85,13 +117,25 @@ export default function Header() {
                 whileHover={{ scale: 1.02 }}
                 className="flex items-center gap-3 px-1 pl-4 py-1 bg-secondary hover:bg-muted border border-border rounded-full transition-all group shadow-sm"
               >
-                {user ? (
+                {/* 1. GUEST VIEW (Name only) */}
+                {config.type === "guest" ? (
+                  <div className="flex items-center gap-2 py-1 pr-3">
+                    <div className="w-8 h-8 rounded-full bg-marketplace-accent/10 flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-marketplace-accent animate-pulse" />
+                    </div>
+                    <span className="text-xs font-bold">
+                      {profile?.full_name || "تاجر جديد"}
+                    </span>
+                  </div>
+                ) : /* 2. AUTHENTICATED (Admin, Seller, Buyer) */
+                user ? (
                   <>
                     <div className="w-8 h-8 rounded-full border-2 border-marketplace-accent overflow-hidden">
                       {profile?.avatar_url ? (
                         <img
                           src={profile.avatar_url}
                           className="w-full h-full object-cover"
+                          alt="avatar"
                         />
                       ) : (
                         <div className="w-full h-full bg-muted flex items-center justify-center">
@@ -109,6 +153,7 @@ export default function Header() {
                     </div>
                   </>
                 ) : (
+                  /* 3. LOGIN VIEW */
                   <div className="flex items-center gap-2 py-1 pr-3">
                     <config.icon className="w-4 h-4 text-marketplace-accent" />
                     <span className="text-xs font-bold">{config.label}</span>

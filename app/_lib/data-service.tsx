@@ -1,11 +1,51 @@
 import { notFound } from "next/navigation";
 import { supabase } from "./supabase";
-import { format } from "date-fns";
-import { ar } from "date-fns/locale"; // npm install date-fns
 
-// app/_lib/data-service.ts
+export async function getPendingRequests() {
+  const { data, error } = await supabase
+    .from("stores")
+    .select(
+      `
+      *,
+      profiles:seller_id (id, full_name, email, phone)
+    `,
+    )
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
 
-// app/_lib/data-service.ts
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function handleRequestDecision(
+  storeId: string,
+  ownerId: string,
+  decision: "approve" | "reject",
+) {
+  if (decision === "approve") {
+    // Update Profile to seller and Store to active
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ role: "seller" })
+      .eq("id", ownerId);
+
+    const { error: storeError } = await supabase
+      .from("stores")
+      .update({ is_active: true })
+      .eq("id", storeId);
+
+    if (profileError || storeError) throw new Error("فشل التحديث");
+  } else {
+    // Remove the pending store record
+    const { error } = await supabase.from("stores").delete().eq("id", storeId);
+
+    if (error) throw new Error("فشل الحذف");
+  }
+}
+
+/**
+ * DASHBOARD: Updated Stats
+ */
 
 export async function updateProfile(userId: string, updates: any) {
   const { data, error } = await supabase
@@ -60,21 +100,53 @@ export async function signUp({
   email,
   password,
   fullName,
-  role = "user",
+  role,
+  storeName,
+  storeDescription,
 }: any) {
-  const { data, error } = await supabase.auth.signUp({
+  const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         full_name: fullName,
-        role: role, // 'super_admin', 'dealer', or 'user'
+        role: role,
       },
     },
   });
 
-  if (error) throw new Error(error.message);
-  return data;
+  if (authError) throw new Error(authError.message);
+
+  if (authData.user) {
+    // 1. Create Profile - Matches columns in image_adbb5f.png
+    const { error: profileError } = await supabase.from("profiles").insert([
+      {
+        id: authData.user.id,
+        full_name: fullName,
+        role: role, // 'guest' or 'buyer'
+      },
+    ]);
+
+    if (profileError) throw new Error(profileError.message);
+
+    // 2. Create Store Request - Uses 'owner_id' and 'is_active' from image_acc39a.png
+    if (role === "guest" && storeName) {
+      const { error: storeError } = await supabase.from("stores").insert([
+        {
+          owner_id: authData.user.id, // Updated from seller_id
+          name: storeName,
+          slug: storeName.toLowerCase().replace(/ /g, "-"), // Basic slug generation
+          description: storeDescription,
+          is_active: false, // Set to false for pending requests
+          is_official: false,
+        },
+      ]);
+
+      if (storeError) throw new Error(storeError.message);
+    }
+  }
+
+  return authData;
 }
 
 /**
@@ -191,7 +263,6 @@ export async function getGrowthMetrics() {
 }
 
 export async function getDashboardStats() {
-  // Parallel fetch for speed
   const [users, stores, products, revenue] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase
@@ -205,16 +276,15 @@ export async function getDashboardStats() {
       .eq("status", "verified_sold"),
   ]);
 
-  // Calculate Total Revenue manually or via RPC
-  const totalRevenue =
-    revenue.data?.reduce((acc, curr) => acc + curr.product_price_at_click, 0) ||
-    0;
-
   return {
     usersCount: users.count || 0,
     storesCount: stores.count || 0,
     productsCount: products.count || 0,
-    totalRevenue: totalRevenue,
+    totalRevenue:
+      revenue.data?.reduce(
+        (acc, curr) => acc + curr.product_price_at_click,
+        0,
+      ) || 0,
   };
 }
 
@@ -283,15 +353,25 @@ export async function getTotalCounts() {
     sellers: sellers.count || 0,
   };
 }
+export async function getStores(sortBy: string = "all") {
+  let query = supabase.from("stores").select("*").eq("is_active", true); // Ensure we only show approved stores
 
-export async function getStores() {
-  const { data, error } = await supabase
-    .from("stores")
-    .select("*")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
+  // Apply sorting logic based on the user's choice
+  if (sortBy === "newest") {
+    query = query.order("created_at", { ascending: false });
+  } else if (sortBy === "popular") {
+    // Using 'is_official' as a proxy for popularity/featured status
+    query = query
+      .order("is_official", { ascending: false })
+      .order("created_at", { ascending: false });
+  } else {
+    // Default 'all' sort
+    query = query.order("created_at", { ascending: false });
+  }
 
-  if (error) throw new Error("Could not load stores");
+  const { data, error } = await query;
+
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -332,26 +412,6 @@ export async function getProduct(id: string) {
   return data;
 }
 
-/////////////
-// CATEGORIES
-
-export async function getCategories() {
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("name");
-
-  if (error) throw new Error("Categories could not be loaded");
-  return data;
-}
-
-/////////////
-// ORDERS & VERIFICATION (The "Lead" Logic)
-
-/**
- * Creates a "Lead" record when a user clicks BUY.
- * This starts the verification timer.
- */
 export async function createOrderLead(newOrder: {
   buyer_id: string;
   store_id: string;

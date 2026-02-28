@@ -12,6 +12,7 @@ import {
   Package,
   DollarSign,
   X,
+  ClipboardList, // New icon for requests
 } from "lucide-react";
 import type { TabType } from "../types";
 
@@ -23,8 +24,10 @@ interface SidebarProps {
   setIsOpen: (open: boolean) => void;
 }
 
+// Updated navigation items to include the new "Requests" tab
 const navigationItems = [
   { id: "overview" as const, label: "نظرة عامة", icon: TrendingUp },
+  { id: "requests" as const, label: "طلبات المتاجر", icon: ClipboardList }, // Added this
   { id: "users" as const, label: "المستخدمين", icon: Users },
   { id: "stores" as const, label: "المتاجر", icon: Store },
   { id: "products" as const, label: "المنتجات", icon: Package },

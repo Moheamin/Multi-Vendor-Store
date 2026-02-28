@@ -10,7 +10,8 @@ import { UsersTab } from "@/app/_components/ui/dashboard/tabs/UserTab";
 import { StoresTab } from "@/app/_components/ui/dashboard/tabs/StoreTab";
 import { ProductsTab } from "@/app/_components/ui/dashboard/tabs/ProductTab";
 import { RevenueTab } from "@/app/_components/ui/dashboard/tabs/RevenueTab";
-import { Menu } from "lucide-react"; // Import Menu for mobile toggle
+import { RequestsTab } from "@/app/_components/ui/dashboard/tabs/RequestsTab"; // New Tab Component
+import { Menu } from "lucide-react";
 import type { TabType } from "@/app/_components/ui/dashboard/types";
 
 export default function DashboardClientWrapper({
@@ -18,15 +19,16 @@ export default function DashboardClientWrapper({
 }: {
   initialData: any;
 }) {
+  // Set initial tab to overview
   const [activeTab, setActiveTab] = useState<TabType>("overview");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const router = useRouter();
 
   const handleBack = () => router.push("/");
 
   return (
     <div className="min-h-screen bg-marketplace-bg selection:bg-marketplace-accent/30 overflow-x-hidden">
-      {/* MOBILE HEADER TOGGLE - Only visible on small screens */}
+      {/* MOBILE HEADER TOGGLE */}
       <div className="md:hidden fixed top-4 right-4 z-[60]">
         <button
           onClick={() => setIsSidebarOpen(true)}
@@ -36,7 +38,7 @@ export default function DashboardClientWrapper({
         </button>
       </div>
 
-      {/* SIDEBAR BACKDROP - Closes sidebar when clicking outside on mobile */}
+      {/* SIDEBAR BACKDROP */}
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.div
@@ -49,12 +51,12 @@ export default function DashboardClientWrapper({
         )}
       </AnimatePresence>
 
-      {/* 1. SIDEBAR - Now handles mobile transitions */}
+      {/* 1. SIDEBAR */}
       <Sidebar
         activeTab={activeTab}
         onTabChange={(tab) => {
           setActiveTab(tab);
-          setIsSidebarOpen(false); // Close on selection (mobile)
+          setIsSidebarOpen(false);
         }}
         onBack={handleBack}
         isOpen={isSidebarOpen}
@@ -78,16 +80,24 @@ export default function DashboardClientWrapper({
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
+              {/* Conditional Rendering of Tabs based on activeTab state */}
               {activeTab === "overview" && <OverviewTab data={initialData} />}
+
               {activeTab === "users" && (
                 <UsersTab data={initialData.usersData} />
               )}
+
               {activeTab === "stores" && (
                 <StoresTab data={initialData.storesData} />
               )}
+
               {activeTab === "products" && (
                 <ProductsTab data={initialData.productsData} />
               )}
+
+              {/* New Requests Tab Component */}
+              {activeTab === "requests" && <RequestsTab />}
+
               {activeTab === "revenue" && (
                 <RevenueTab
                   revenueData={initialData.revenueData}

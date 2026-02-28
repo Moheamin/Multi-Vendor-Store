@@ -1,62 +1,63 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  SlidersHorizontal,
-  Loader2,
   PackageSearch,
+  ChevronDown,
+  Filter,
+  Clock,
+  Star,
+  LayoutGrid,
 } from "lucide-react";
 import { StoreCard } from "../ui/store/StoreCard";
 import { Hero } from "./Hero";
 import Footer from "./Footer";
 import Link from "next/link";
-import { getStores, getCategories } from "@/app/_lib/data-service";
+import { getStores } from "@/app/_lib/data-service";
+
+const FILTER_OPTIONS = [
+  { id: "all", label: "الكل", icon: LayoutGrid },
+  { id: "newest", label: "الأحدث", icon: Clock },
+  { id: "popular", label: "الأكثر شعبية", icon: Star },
+];
 
 export default function Main() {
   const [stores, setStores] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeSort, setActiveSort] = useState("all");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  // Fetch data whenever activeSort changes
   useEffect(() => {
     async function loadData() {
+      setLoading(true);
       try {
-        const [storesData, categoriesData] = await Promise.all([
-          getStores(),
-          getCategories(),
-        ]);
+        const storesData = await getStores(activeSort);
         setStores(storesData);
-        setCategories(categoriesData);
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching stores:", error);
       } finally {
         setLoading(false);
       }
     }
     loadData();
-  }, []);
+  }, [activeSort]);
 
-  const filteredStores = stores.filter((store) => {
-    const matchesSearch = store.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      activeCategory === "all" || store.category_id === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredStores = stores.filter((store) =>
+    store.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div className="bg-marketplace-bg min-h-screen">
       <Hero />
 
       <main dir="rtl" className="max-w-7xl mx-auto px-6 py-16">
-        {/* Advanced Filter & Search Bar Layout */}
         <section className="sticky top-4 z-40 mb-16">
           <div className="bg-marketplace-card/80 backdrop-blur-2xl border border-border/50 p-3 rounded-[2rem] shadow-2xl flex flex-col md:flex-row gap-3">
-            {/* Search Input Group */}
+            {/* Search Input */}
             <div className="relative flex-1 group">
               <Search className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-marketplace-accent transition-colors" />
               <input
@@ -68,56 +69,72 @@ export default function Main() {
               />
             </div>
 
-            {/* Category Selector */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 px-2 scrollbar-hide">
+            {/* Standard Filters Dropdown */}
+            <div className="relative">
               <button
-                onClick={() => setActiveCategory("all")}
-                className={`px-6 py-3.5 rounded-xl whitespace-nowrap font-bold text-sm transition-all ${
-                  activeCategory === "all"
-                    ? "bg-marketplace-accent text-white shadow-lg shadow-marketplace-accent/20"
-                    : "bg-marketplace-bg text-marketplace-text-secondary hover:bg-muted"
-                }`}
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className="flex items-center justify-between gap-3 px-6 py-4 bg-marketplace-accent rounded-2xl text-white font-bold min-w-[180px] shadow-lg shadow-marketplace-accent/20 transition-transform active:scale-95"
               >
-                الكل
+                <span>
+                  {FILTER_OPTIONS.find((f) => f.id === activeSort)?.label}
+                </span>
+                <ChevronDown
+                  className={`transition-transform duration-300 ${isFilterOpen ? "rotate-180" : ""}`}
+                  size={18}
+                />
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`px-6 py-3.5 rounded-xl whitespace-nowrap font-bold text-sm transition-all ${
-                    activeCategory === cat.id
-                      ? "bg-marketplace-accent text-white shadow-lg shadow-marketplace-accent/20"
-                      : "bg-marketplace-bg text-marketplace-text-secondary hover:bg-muted"
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
 
-            {/* Filter Icon Button (Visual Only) */}
-            <button className="hidden lg:flex items-center justify-center p-4 bg-marketplace-bg border border-border/50 rounded-2xl text-marketplace-text-secondary hover:text-marketplace-accent transition-colors">
-              <SlidersHorizontal size={20} />
-            </button>
+              <AnimatePresence>
+                {isFilterOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 5, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-marketplace-card border border-border/50 rounded-2xl shadow-2xl overflow-hidden z-50 p-2 min-w-[200px]"
+                  >
+                    {FILTER_OPTIONS.map((option) => {
+                      const Icon = option.icon;
+                      return (
+                        <button
+                          key={option.id}
+                          onClick={() => {
+                            setActiveSort(option.id);
+                            setIsFilterOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors ${
+                            activeSort === option.id
+                              ? "bg-marketplace-accent/10 text-marketplace-accent"
+                              : "hover:bg-muted text-marketplace-text-secondary"
+                          }`}
+                        >
+                          <Icon size={18} />
+                          <span className="font-bold">{option.label}</span>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </section>
 
-        {/* Results Info */}
+        {/* Results Header */}
         <div className="flex items-center justify-between mb-10 px-2">
           <h2 className="text-2xl font-bold text-marketplace-text-primary">
-            {activeCategory === "all" ? "المتاجر المتاحة" : "نتائج البحث"}
+            {FILTER_OPTIONS.find((f) => f.id === activeSort)?.label}
             <span className="text-sm font-normal text-marketplace-text-secondary mr-3 opacity-60">
               ({filteredStores.length} متجر)
             </span>
           </h2>
         </div>
 
-        {/* Dynamic Content Area */}
+        {/* Grid Display */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            {[...Array(8)].map((_, i) => (
               <div
-                key={n}
+                key={i}
                 className="h-[320px] bg-marketplace-card/40 animate-pulse rounded-3xl border border-border/20"
               />
             ))}
@@ -146,13 +163,9 @@ export default function Main() {
           </div>
         )}
 
-        {/* Elegant Empty State */}
+        {/* Empty State */}
         {!loading && filteredStores.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-32 text-center"
-          >
+          <motion.div className="flex flex-col items-center justify-center py-32 text-center">
             <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-6 text-muted-foreground">
               <PackageSearch size={40} strokeWidth={1.5} />
             </div>
@@ -160,12 +173,11 @@ export default function Main() {
               لا يوجد نتائج
             </h3>
             <p className="text-marketplace-text-secondary">
-              حاول تغيير معايير البحث أو الفئة المختارة
+              جرب استخدام كلمات بحث مختلفة
             </p>
           </motion.div>
         )}
       </main>
-
       <Footer />
     </div>
   );

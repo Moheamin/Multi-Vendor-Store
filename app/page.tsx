@@ -4,7 +4,7 @@ import "./styles/globals.css";
 import Header from "./_components/content/Header";
 
 export const metadata = {
-  title: "متجر متعدد البائعين",
+  title: "لنك الصناعة",
   description: "منصة تجمع بين المتاجر والبائعين في مكان واحد",
 };
 
