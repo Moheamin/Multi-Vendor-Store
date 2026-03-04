@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { getStores, getUser } from "@/app/_lib/data-service";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Search,
-  PackageSearch,
   ChevronDown,
-  Filter,
   Clock,
-  Star,
   LayoutGrid,
+  PackageSearch,
+  Search,
+  Star,
+  User,
 } from "lucide-react";
-import { StoreCard } from "../ui/store/StoreCard";
-import { Hero } from "./Hero";
-import Footer from "./Footer";
 import Link from "next/link";
-import { getStores } from "@/app/_lib/data-service";
+import { useEffect, useState } from "react";
+import { StoreCard } from "../ui/store/StoreCard";
+import Footer from "./Footer";
+import { Hero } from "./Hero";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "الكل", icon: LayoutGrid },
@@ -25,17 +25,22 @@ const FILTER_OPTIONS = [
 
 export default function Main() {
   const [stores, setStores] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null); // Track signed-in user
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSort, setActiveSort] = useState("all");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // Fetch data whenever activeSort changes
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
-        const storesData = await getStores(activeSort);
+        // 1. Get the current user session
+        const user = await getUser();
+        setCurrentUser(user);
+
+        // 2. Fetch stores (passing userId to handle bubbling logic)
+        const storesData = await getStores(activeSort, user?.id);
         setStores(storesData);
       } catch (error) {
         console.error("Error fetching stores:", error);
@@ -142,23 +147,48 @@ export default function Main() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             <AnimatePresence mode="popLayout">
-              {filteredStores.map((store, index) => (
-                <motion.div
-                  key={store.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                >
-                  <Link
-                    href={`/store/${store.slug || store.id}`}
-                    className="block group"
+              {filteredStores.map((store, index) => {
+                // Determine if this is the logged-in seller's store
+                const isMyStore = currentUser?.id === store.owner_id;
+
+                return (
+                  <motion.div
+                    key={store.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="relative"
                   >
-                    <StoreCard store={store} />
-                  </Link>
-                </motion.div>
-              ))}
+                    <Link
+                      href={`/store/${store.slug || store.id}`}
+                      className={`block group rounded-3xl transition-all duration-500 ${
+                        isMyStore
+                          ? "ring-2 ring-marketplace-accent ring-offset-4 ring-offset-marketplace-bg shadow-xl shadow-marketplace-accent/10"
+                          : ""
+                      }`}
+                    >
+                      {/* Special Indicator for My Store */}
+                      {isMyStore && (
+                        <div className="absolute -top-3 -right-2 z-10 bg-marketplace-accent text-white px-3 py-1 rounded-full text-[10px] font-black flex items-center gap-1 shadow-lg border-2 border-marketplace-bg animate-bounce-slow">
+                          <User size={12} />
+                        </div>
+                      )}
+
+                      <div
+                        className={`rounded-3xl transition-all duration-300 ${
+                          isMyStore
+                            ? "border-2 border-marketplace-accent/50"
+                            : "border border-transparent"
+                        }`}
+                      >
+                        <StoreCard store={store} />
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
         )}

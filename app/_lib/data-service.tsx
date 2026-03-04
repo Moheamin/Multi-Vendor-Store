@@ -1,6 +1,85 @@
 import { notFound } from "next/navigation";
 import { supabase } from "./supabase";
 
+export async function uploadProductImage(file: File) {
+  const fileName = `${Math.random()}-${file.name}`.replace(/\s/g, "-");
+  const path = `product-images/${fileName}`;
+
+  const { data, error } = await supabase.storage
+    .from("products") // Make sure you have a bucket named 'products'
+    .upload(path, file);
+
+  if (error) throw error;
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("products").getPublicUrl(path);
+
+  return publicUrl;
+}
+
+export async function updateStoreData(storeId: string, updates: any) {
+  if (!storeId) throw new Error("Store ID is missing");
+
+  const { data, error } = await supabase
+    .from("stores")
+    .update(updates)
+    .eq("id", storeId)
+    .select()
+    .maybeSingle(); // <--- Change .single() to .maybeSingle()
+
+  if (error) {
+    console.error("Database Error:", error.message);
+    throw error;
+  }
+
+  if (!data) {
+    console.error("No store found with ID:", storeId);
+    throw new Error("Store not found in database");
+  }
+
+  return data;
+}
+// Fetch the owner's phone specifically from their profile
+export async function getOwnerPhone(ownerId: string) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("phone")
+    .eq("id", ownerId)
+    .single();
+  return data?.phone || "";
+}
+
+export async function updateStore(storeId: string, updates: any) {
+  const { data, error } = await supabase
+    .from("stores")
+    .update(updates)
+    .eq("id", storeId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function createProduct(productData: {
+  name: string;
+  price: number; // Ensure this is a number
+  description: string;
+  store_id: string; // This is usually why it fails
+}) {
+  const { data, error } = await supabase
+    .from("products")
+    .insert([productData])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    throw new Error(error.message);
+  }
+  return data;
+}
+
 export async function getPendingRequests() {
   const { data, error } = await supabase
     .from("stores")
@@ -51,18 +130,14 @@ export async function updateProfile(userId: string, updates: any) {
   const { data, error } = await supabase
     .from("profiles")
     .upsert({
-      id: userId, // المفتاح الأساسي للتعرف على السجل
-      ...updates, // البيانات المراد تحديثها أو إضافتها
-      updated_at: new Date(), // اختياري: لتسجيل وقت التحديث
+      id: userId,
+      ...updates,
+      updated_at: new Date().toISOString(), // Change this line
     })
     .select()
-    .maybeSingle(); // استخدم maybeSingle بدلاً من single لتجنب الخطأ إذا فشل الاسترداد
+    .maybeSingle();
 
-  if (error) {
-    console.error("Profile update error:", error);
-    throw new Error(error.message);
-  }
-
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -353,25 +428,31 @@ export async function getTotalCounts() {
     sellers: sellers.count || 0,
   };
 }
-export async function getStores(sortBy: string = "all") {
-  let query = supabase.from("stores").select("*").eq("is_active", true); // Ensure we only show approved stores
+export async function getStores(
+  sortBy: string = "all",
+  currentUserId?: string,
+) {
+  let query = supabase.from("stores").select("*").eq("is_active", true);
 
-  // Apply sorting logic based on the user's choice
+  // Apply basic sorting
   if (sortBy === "newest") {
     query = query.order("created_at", { ascending: false });
-  } else if (sortBy === "popular") {
-    // Using 'is_official' as a proxy for popularity/featured status
-    query = query
-      .order("is_official", { ascending: false })
-      .order("created_at", { ascending: false });
   } else {
-    // Default 'all' sort
     query = query.order("created_at", { ascending: false });
   }
 
   const { data, error } = await query;
-
   if (error) throw new Error(error.message);
+
+  // Logic to put the logged-in user's store at the top
+  if (currentUserId && data) {
+    return [...data].sort((a, b) => {
+      if (a.owner_id === currentUserId) return -1; // Move user's store to front
+      if (b.owner_id === currentUserId) return 1;
+      return 0; // Keep original order for others
+    });
+  }
+
   return data;
 }
 
