@@ -10,15 +10,13 @@ interface ProductCardProps {
     image_url?: string;
     category?: string;
   };
-  onClick: () => void;
 }
 
-export function ProductCard({ product, onClick }: any) {
+export function ProductCard({ product }: ProductCardProps) {
   return (
     <motion.div
       dir="rtl"
       whileHover={{ y: -6 }}
-      onClick={onClick}
       className="bg-marketplace-card/50 backdrop-blur-sm rounded-3xl overflow-hidden border border-border/40 cursor-pointer group hover:border-marketplace-accent/30 transition-all duration-300 shadow-sm hover:shadow-xl"
     >
       <div className="relative aspect-square overflow-hidden m-2 rounded-2xl">

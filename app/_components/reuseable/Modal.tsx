@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import React, { useEffect } from "react";
 
 interface ModalProps {
@@ -38,23 +39,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
           </h2>
           <button
             onClick={onClose}
-            className="rounded-md p-2 text-marketplace-text-secondary transition-colors hover:bg-marketplace-card-hover hover:text-marketplace-text-primary focus:outline-none focus:ring-2 focus:ring-marketplace-accent"
+            className="rounded-md cursor-pointer p-2 text-marketplace-text-secondary transition-colors hover:bg-marketplace-card-hover hover:text-marketplace-text-primary focus:outline-none focus:ring-2 focus:ring-marketplace-accent"
             aria-label="إغلاق"
           >
-            {/* Simple Close (X) Icon */}
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X size={18} />
           </button>
         </div>
 
@@ -69,7 +57,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
         <div className="border-t border-border p-4 sm:px-6 bg-marketplace-bg flex justify-end">
           <button
             onClick={onClose}
-            className="rounded-md bg-marketplace-accent px-4 py-2 text-primary-foreground hover:opacity-90 transition-opacity"
+            className="rounded-md cursor-pointer bg-marketplace-accent px-4 py-2 text-primary-foreground hover:opacity-90 transition-opacity hover:scale-103"
           >
             حسناً
           </button>

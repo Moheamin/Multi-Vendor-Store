@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/app/_components/ui/dashboard/components/SideBar";
 import { DashboardHeader } from "@/app/_components/ui/dashboard/components/DashboardHeader";
@@ -24,7 +24,10 @@ export default function DashboardClientWrapper({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const router = useRouter();
 
+  useEffect(() => {}, [initialData]);
+
   const handleBack = () => router.push("/");
+  console.log(initialData.storesData);
 
   return (
     <div className="min-h-screen bg-marketplace-bg selection:bg-marketplace-accent/30 overflow-x-hidden">
@@ -80,24 +83,29 @@ export default function DashboardClientWrapper({
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
-              {/* Conditional Rendering of Tabs based on activeTab state */}
-              {activeTab === "overview" && <OverviewTab data={initialData} />}
-
+              {activeTab === "overview" && (
+                <OverviewTab
+                  data={{
+                    ...initialData,
+                    storesData: initialData.storesData, // Mapping the names so they match
+                  }}
+                />
+              )}
               {activeTab === "users" && (
                 <UsersTab data={initialData.usersData} />
               )}
-
               {activeTab === "stores" && (
-                <StoresTab data={initialData.storesData} />
+                <StoresTab
+                  data={initialData.storeTabData}
+                  adminStoreData={initialData.adminStoreData}
+                  sideData={initialData.storesData}
+                />
               )}
-
               {activeTab === "products" && (
                 <ProductsTab data={initialData.productsData} />
               )}
-
               {/* New Requests Tab Component */}
               {activeTab === "requests" && <RequestsTab />}
-
               {activeTab === "revenue" && (
                 <RevenueTab
                   revenueData={initialData.revenueData}

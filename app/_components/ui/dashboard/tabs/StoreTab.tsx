@@ -11,25 +11,50 @@ import {
   TrendingUp,
   Filter,
   Check,
+  BadgeCheck,
 } from "lucide-react";
-import { TableActions, storeActions } from "../components/TableActions";
+import { TableActions, buildStoreActions } from "../components/TableActions";
+import { StoreModal } from "../components/StoreModal";
+import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
+import {
+  adminDeleteStore,
+  adminToggleStoreActive,
+  getAvailableOwners,
+} from "@/app/_lib/data-services/admin-service";
+// import { getAdminStores } from "@/app/_lib/data-services/dashboard-service";
+import { toast } from "react-hot-toast";
+import { supabase } from "@/app/_lib/supabase/client";
 
-interface StoresTabProps {
-  data: {
-    id: string | number;
-    name: string;
-    dealer: string;
-    products: number;
-    revenue: string;
-    status: string;
-  }[];
-}
-
-export function StoresTab({ data }: StoresTabProps) {
+export function StoresTab({
+  data: initialData,
+  adminStoreData: storeData,
+  sideData: subData,
+}: {
+  data: any[];
+  adminStoreData: any;
+  sideData: any;
+}) {
+  const [data, setData] = useState<any[]>(initialData);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("الكل");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+  const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [owners, setOwners] = useState<any[]>([]);
+  async function fetchOwners() {
+    try {
+      const data = await getAvailableOwners();
+      setOwners(data);
+    } catch (error) {
+      console.error("Failed to fetch owners:", error);
+    }
+  }
+  useEffect(() => {
+    fetchOwners();
+  }, []);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -40,20 +65,90 @@ export function StoresTab({ data }: StoresTabProps) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const statuses = ["الكل", ...Array.from(new Set(data.map((s) => s.status)))];
+  // useEffect(() => {
+  //   const channel = supabase
+  //     .channel("realtime-stores")
+  //     .on(
+  //       "postgres_changes",
+  //       { event: "*", schema: "public", table: "stores" },
+  //       () => {
+  //         refreshData();
+  //       },
+  //     )
+  //     .subscribe();
 
+  //   return () => {
+  //     supabase.removeChannel(channel);
+  //   };
+  // }, []);
+
+  const statuses = ["الكل", "نشط", "معطل"];
   const filteredStores = data.filter((store) => {
+    // تم تحديث المتغيرات لتتوافق مع الـ Mapping الجديد
     const matchesSearch =
-      store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      store.dealer.toLowerCase().includes(searchQuery.toLowerCase());
+      (store.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (store.dealerName || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+
+    const storeStatus = store.isActive ? "نشط" : "معطل";
     const matchesFilter =
-      activeFilter === "الكل" || store.status === activeFilter;
+      activeFilter === "الكل" || storeStatus === activeFilter;
     return matchesSearch && matchesFilter;
   });
 
+  async function refreshData() {
+    try {
+      setData(storeData);
+    } catch (err) {
+      console.error("Failed to refresh stores:", err);
+    }
+  }
+
+  function handleEdit(store: any) {
+    setSelectedStore(store);
+    setIsStoreModalOpen(true);
+  }
+
+  function handleDeletePrompt(store: any) {
+    setSelectedStore(store);
+    setIsDeleteModalOpen(true);
+  }
+
+  async function handleToggleActive(store: any) {
+    try {
+      await adminToggleStoreActive(store.id, !store.isActive);
+      toast.success(store.isActive ? "تم تعطيل المتجر" : "تم تفعيل المتجر");
+      setData((prev) =>
+        prev.map((s) =>
+          s.id === store.id ? { ...s, isActive: !s.isActive } : s,
+        ),
+      );
+    } catch (err: any) {
+      toast.error(err.message || "فشل التحديث");
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!selectedStore) return;
+    setIsDeleting(true);
+    try {
+      await adminDeleteStore(selectedStore.id);
+      toast.success("تم حذف المتجر بنجاح");
+      setData((prev) => prev.filter((s) => s.id !== selectedStore.id));
+      setIsDeleteModalOpen(false);
+      setSelectedStore(null);
+    } catch (err: any) {
+      toast.error(err.message || "فشل الحذف");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  // ... (الـ Header UI لم يتغير، لذلك نختصره أو نبقيه كما هو)
   return (
     <div className="space-y-6" dir="rtl">
-      {/* 1. RESPONSIVE COMMAND BAR */}
+      {/* Header UI */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-marketplace-card p-4 rounded-[2rem] border border-marketplace-border shadow-sm">
         <div className="flex items-center gap-2 w-full md:w-auto flex-1">
           <div className="relative flex-1 max-w-md group">
@@ -69,26 +164,20 @@ export function StoresTab({ data }: StoresTabProps) {
               className="w-full bg-marketplace-bg border border-transparent focus:border-marketplace-accent/20 rounded-2xl py-3 pr-11 pl-4 outline-none text-marketplace-text-primary font-bold transition-all"
             />
           </div>
-
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`p-3 rounded-2xl border transition-all ${
-                isFilterOpen
-                  ? "bg-marketplace-accent text-white border-marketplace-accent"
-                  : "bg-marketplace-bg text-marketplace-text-primary border-marketplace-border"
-              }`}
+              className={`p-3 rounded-2xl cursor-pointer border transition-all ${isFilterOpen ? "bg-marketplace-accent text-white border-marketplace-accent" : "bg-marketplace-bg text-marketplace-text-primary border-marketplace-border"}`}
             >
               <Filter size={18} />
             </button>
-
             <AnimatePresence>
               {isFilterOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute left-0 mt-3 w-48 bg-marketplace-card border border-marketplace-border rounded-2xl shadow-xl overflow-hidden py-2 z-50 backdrop-blur-xl"
+                  className="absolute left-0 mt-3 w-48 bg-marketplace-card border border-marketplace-border rounded-2xl shadow-xl overflow-hidden py-2 z-50"
                 >
                   {statuses.map((status) => (
                     <button
@@ -97,7 +186,7 @@ export function StoresTab({ data }: StoresTabProps) {
                         setActiveFilter(status);
                         setIsFilterOpen(false);
                       }}
-                      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-marketplace-card-hover transition-colors"
+                      className="w-full cursor-pointer flex items-center justify-between px-4 py-2.5 hover:bg-marketplace-card-hover transition-colors"
                     >
                       <span
                         className={`text-sm font-bold ${activeFilter === status ? "text-marketplace-accent" : "text-marketplace-text-secondary"}`}
@@ -115,46 +204,55 @@ export function StoresTab({ data }: StoresTabProps) {
           </div>
         </div>
 
-        <button className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-marketplace-accent text-white rounded-2xl font-bold hover:opacity-90 transition-all shadow-lg shadow-marketplace-accent/20">
+        <button
+          onClick={() => {
+            setSelectedStore(null);
+            setIsStoreModalOpen(true);
+          }}
+          className="w-full cursor-pointer md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-marketplace-accent text-white rounded-2xl font-bold hover:opacity-90 transition-all shadow-lg shadow-marketplace-accent/20"
+        >
           <Plus size={18} />
           <span>إضافة متجر</span>
         </button>
       </div>
 
-      {/* 2. STORES TABLE */}
+      {/* Table Section */}
       <div className="bg-marketplace-card rounded-[2.5rem] border border-marketplace-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-right min-w-[900px]">
+          <table className="w-full text-right min-w-[1000px]">
             <thead>
               <tr className="bg-marketplace-bg/30 border-b border-marketplace-border">
-                <th className="px-8 py-5 text-marketplace-text-secondary font-black text-[10px] uppercase tracking-widest">
-                  المتجر
-                </th>
-                <th className="px-8 py-5 text-marketplace-text-secondary font-black text-[10px] uppercase tracking-widest">
-                  التاجر المسجل
-                </th>
-                <th className="px-8 py-5 text-marketplace-text-secondary font-black text-[10px] uppercase tracking-widest">
-                  المخزون
-                </th>
-                <th className="px-8 py-5 text-marketplace-text-secondary font-black text-[10px] uppercase tracking-widest">
-                  إجمالي الإيرادات
-                </th>
-                <th className="px-8 py-5 text-marketplace-text-secondary font-black text-[10px] uppercase tracking-widest">
-                  الحالة
-                </th>
-                <th className="px-8 py-5 text-marketplace-text-secondary font-black text-[10px] uppercase tracking-widest text-left">
-                  الإجراءات
-                </th>
+                {[
+                  "المتجر",
+                  "التاجر المسجل",
+                  "المخزون",
+                  "إجمالي الإيرادات",
+                  "الحالة",
+                  "الإجراءات",
+                ].map((h, i) => (
+                  <th
+                    key={i}
+                    className={`px-8 py-5 text-marketplace-text-secondary font-black text-[10px] uppercase tracking-widest ${i === 5 ? "text-left" : ""}`}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-marketplace-border/50">
               {filteredStores.map((store) => (
-                <StoreRow key={store.id} store={store} />
+                <StoreRow
+                  key={store.id}
+                  store={store}
+                  sub={subData.find((s: any) => s.id === store.id) || {}}
+                  onEdit={handleEdit}
+                  onDelete={handleDeletePrompt}
+                  onToggleActive={handleToggleActive}
+                />
               ))}
             </tbody>
           </table>
         </div>
-
         {filteredStores.length === 0 && (
           <div className="p-20 text-center">
             <div className="w-16 h-16 bg-marketplace-bg rounded-2xl flex items-center justify-center mx-auto mb-4 border border-marketplace-border text-marketplace-text-secondary opacity-20">
@@ -166,70 +264,99 @@ export function StoresTab({ data }: StoresTabProps) {
           </div>
         )}
       </div>
+
+      <StoreModal
+        isOpen={isStoreModalOpen}
+        onClose={() => setIsStoreModalOpen(false)}
+        store={selectedStore}
+        onSuccess={refreshData}
+        profiles={owners}
+      />
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="حذف المتجر"
+        description={`هل أنت متأكد من حذف متجر "${selectedStore?.name}"؟`}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
 
-function StoreRow({ store }: { store: any }) {
-  const [isHovered, setIsHovered] = useState(false);
+// StoreRow المحدث ليتعامل مع متغيرات camelCase الجديدة
+function StoreRow({ store, onEdit, onDelete, onToggleActive, sub }: any) {
+  const actions = buildStoreActions(store, onEdit, onDelete, onToggleActive);
+
+  // استخدام المتغيرات الجديدة من المابينغ
+  const ownerName = sub.name || "—";
+  const revenue = sub.revenue
+    ? `${parseInt(sub.revenue).toLocaleString()} د.ع`
+    : "0 د.ع";
+  const productsCount = sub.products ?? 0;
 
   return (
-    <tr
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="group hover:bg-marketplace-card-hover transition-all duration-300"
-    >
+    <tr className="group hover:bg-marketplace-card-hover transition-all duration-300">
       <td className="px-8 py-5">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-marketplace-accent/10 border border-marketplace-accent/20 flex items-center justify-center text-marketplace-accent group-hover:scale-110 transition-transform">
-            <Store size={22} />
+          {store.logoUrl ? (
+            <img
+              src={store.logoUrl}
+              alt={store.name}
+              className="w-12 h-12 rounded-2xl object-cover border border-marketplace-border"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-2xl bg-marketplace-accent/10 border border-marketplace-accent/20 flex items-center justify-center text-marketplace-accent">
+              <Store size={22} />
+            </div>
+          )}
+          <div className="flex flex-col">
+            <span className="text-marketplace-text-primary font-bold text-base flex items-center gap-1.5">
+              {store.name}
+            </span>
+            {store.slug && (
+              <span
+                className="text-marketplace-text-secondary text-xs"
+                dir="ltr"
+              >
+                @{store.slug}
+              </span>
+            )}
           </div>
-          <span className="text-marketplace-text-primary font-bold text-base">
-            {store.name}
-          </span>
         </div>
       </td>
 
       <td className="px-8 py-5">
-        <div className="flex items-center gap-2 text-marketplace-text-secondary font-medium">
-          <User size={14} className="opacity-50" />
-          {store.dealer}
+        <div className="flex items-center gap-2 text-marketplace-text-primary font-bold">
+          <User size={14} className="text-marketplace-text-secondary" />
+          {ownerName}
         </div>
       </td>
 
       <td className="px-8 py-5">
-        <div className="flex items-center gap-2 text-marketplace-text-primary">
+        <div className="flex items-center gap-2 text-marketplace-text-primary font-bold">
           <Package size={14} className="text-marketplace-text-secondary" />
-          <span className="font-bold">{store.products}</span>
-          <span className="text-xs text-marketplace-text-secondary">منتج</span>
+          {productsCount} منتج
         </div>
       </td>
 
       <td className="px-8 py-5">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-green-500/10 text-green-500">
-            <TrendingUp size={14} />
-          </div>
-          <span className="text-marketplace-accent font-black">
-            {store.revenue}
-          </span>
+        <div className="flex items-center gap-2 text-marketplace-accent font-black">
+          <TrendingUp size={14} />
+          {revenue}
         </div>
       </td>
 
       <td className="px-8 py-5">
         <span
-          className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-colors ${
-            store.status === "نشط"
-              ? "bg-green-500/5 border-green-500/20 text-green-600 dark:text-green-400"
-              : "bg-yellow-500/5 border-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-          }`}
+          className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border ${store.isActive ? "bg-green-500/5 border-green-500/20 text-green-600" : "bg-yellow-500/5 border-yellow-500/20 text-yellow-600"}`}
         >
-          {store.status}
+          {store.isActive ? "نشط" : "معطل"}
         </span>
       </td>
 
       <td className="px-8 py-5 text-left">
-        <TableActions isHovered={isHovered} actions={storeActions} />
+        <TableActions actions={actions} />
       </td>
     </tr>
   );

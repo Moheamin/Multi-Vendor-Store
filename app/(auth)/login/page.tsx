@@ -5,31 +5,24 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
-import { signIn } from "@/app/_lib/data-service"; // Ensure this path is correct
+import { signIn } from "@/app/_lib/data-services/auth-service";
 
 export default function LoginPage() {
   const router = useRouter();
-
-  // 1. Local State for form inputs
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 2. Handle Form Submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
       await signIn({ email, password });
-
-      // 3. Success: Redirect to home and refresh to update Header state
       router.push("/");
       router.refresh();
     } catch (err: any) {
-      // 4. Error handling
       setError(err.message || "حدث خطأ أثناء تسجيل الدخول");
     } finally {
       setLoading(false);
@@ -53,7 +46,6 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Error Message Display */}
       {error && (
         <div className="mb-6 p-3 bg-red-500/10 border border-red-500/50 text-red-500 text-sm rounded-xl text-center">
           {error}
@@ -102,8 +94,7 @@ export default function LoginPage() {
         >
           {loading ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              جاري الدخول...
+              <Loader2 className="w-5 h-5 animate-spin" /> جاري الدخول...
             </>
           ) : (
             "دخول"

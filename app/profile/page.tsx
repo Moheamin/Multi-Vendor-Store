@@ -17,8 +17,12 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/app/_lib/supabase";
-import { updateProfile, uploadAvatar, signOut } from "@/app/_lib/data-service";
+import { supabase } from "@/app/_lib/supabase/client";
+import {
+  updateProfile,
+  uploadAvatar,
+} from "@/app/_lib/data-services/profile-service";
+import { signOut } from "@/app/_lib/data-services/auth-service";
 
 export default function ProfilePage() {
   const router = useRouter();

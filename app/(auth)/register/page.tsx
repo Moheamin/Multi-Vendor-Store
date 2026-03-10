@@ -13,7 +13,7 @@ import {
   Users,
   FileText,
 } from "lucide-react";
-import { signUp } from "@/app/_lib/data-service";
+import { signUp } from "@/app/_lib/data-services/auth-service";
 
 export default function RegisterPage() {
   const router = useRouter();

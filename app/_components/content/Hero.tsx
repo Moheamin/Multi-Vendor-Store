@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Package, Store, Users } from "lucide-react";
+import { Package, Store, Users } from "lucide-react";
 import { motion } from "motion/react";
-import { getTotalCounts } from "@/app/_lib/data-service";
+import { getTotalCounts } from "@/app/_lib/data-services/store-service";
 
 export function Hero() {
   const [counts, setCounts] = useState({ stores: 0, products: 0, sellers: 0 });
@@ -33,13 +33,9 @@ export function Hero() {
       animate={{ opacity: 1 }}
       className="relative overflow-hidden pt-32 pb-24 px-6 border-b border-border/40 bg-marketplace-bg"
     >
-      {/* Premium Background Polish */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Dark Mode Glowing Orbs */}
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-marketplace-accent/10 dark:bg-marketplace-accent/20 blur-[120px] rounded-full" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-[#0097a7]/10 dark:bg-[#0097a7]/20 blur-[120px] rounded-full" />
-
-        {/* Subtle Grid Pattern */}
         <div
           className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
           style={{

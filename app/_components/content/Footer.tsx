@@ -104,9 +104,7 @@ export default function Footer() {
           </div>
 
           <div className="mt-16 pt-8 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-marketplace-text-secondary">
-            <p>
-              © {new Date().getFullYear()} السوق الإلكتروني. جميع الحقوق محفوظة.
-            </p>
+            <p>© {new Date().getFullYear()} لنك الصناعة. جميع الحقوق محفوظة.</p>
           </div>
         </div>
       </footer>

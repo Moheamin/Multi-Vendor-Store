@@ -13,8 +13,10 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { ModeToggle } from "@/app/_lib/ModeToggle";
-import { supabase } from "@/app/_lib/supabase";
-import { getProfile, signOut } from "@/app/_lib/data-service"; // 2. Imported your signOut function
+import { supabase } from "@/app/_lib/supabase/client";
+import { signOut } from "@/app/_lib/data-services/auth-service";
+import { getProfile } from "@/app/_lib/data-services/profile-service";
+
 import Link from "next/link";
 
 export default function Header() {
@@ -145,7 +147,7 @@ export default function Header() {
                   whileTap={{ scale: 0.95 }}
                   onClick={handleSignOut}
                   disabled={isSigningOut}
-                  className="flex items-center justify-center w-10 h-10 rounded-full border border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                  className="flex items-center cursor-pointer justify-center w-10 h-10 rounded-full border border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
                   title="تسجيل الخروج"
                 >
                   {isSigningOut ? (
@@ -160,7 +162,7 @@ export default function Header() {
               <Link href={config.href}>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
-                  className="flex items-center gap-3 px-1 pl-4 py-1 bg-secondary hover:bg-muted border border-border rounded-full transition-all group shadow-sm"
+                  className="flex cursor-pointer items-center gap-3 px-1 pl-4 py-1 bg-secondary hover:bg-muted border border-border rounded-full transition-all group shadow-sm"
                 >
                   {config.type === "guest" ? (
                     <div className="flex items-center gap-2 py-1 pr-3">

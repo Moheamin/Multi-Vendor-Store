@@ -10,6 +10,7 @@ const tabTitles: Record<TabType, string> = {
   stores: "إدارة المتاجر",
   products: "إدارة المنتجات",
   revenue: "تحليلات الإيرادات",
+  requests: "الطلبات",
 };
 
 export function DashboardHeader({ activeTab }: DashboardHeaderProps) {

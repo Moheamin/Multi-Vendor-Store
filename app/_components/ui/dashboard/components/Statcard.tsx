@@ -1,68 +1,64 @@
 "use client";
 
-import { motion } from "motion/react";
-import {
-  TrendingUp,
-  TrendingDown,
-  Users,
-  Store,
-  Package,
-  DollarSign,
-} from "lucide-react";
-import type { Stat } from "../types";
-
-const iconMap: Record<
-  string,
-  React.ComponentType<{ className?: string; style?: React.CSSProperties }>
-> = {
-  Users,
-  Store,
-  Package,
-  DollarSign,
-};
+import { motion } from "framer-motion";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface StatCardProps {
-  stat: Stat;
+  stat: {
+    label: string;
+    value: string | number;
+    change?: string;
+    trend?: "up" | "down";
+    icon?: React.ReactNode;
+    color?: string;
+  };
   index: number;
 }
 
 export function StatCard({ stat, index }: StatCardProps) {
-  const Icon = iconMap[stat.icon] || Users;
-  const TrendIcon = stat.trend === "up" ? TrendingUp : TrendingDown;
+  const isUp =
+    stat.trend === "up" || (stat.change && stat.change.startsWith("+"));
+  const changeValue = stat.change || "";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className="border border-border rounded-xl p-6 transition-all duration-300 
-                 bg-marketplace-card shadow-sm hover:border-marketplace-accent"
+      transition={{
+        delay: index * 0.08,
+        type: "spring",
+        stiffness: 300,
+        damping: 25,
+      }}
+      className="relative group overflow-hidden bg-marketplace-card border border-marketplace-border rounded-[2rem] p-7 shadow-sm hover:shadow-md transition-shadow"
     >
-      <div className="flex items-center justify-between mb-4">
-        {/* We keep the dynamic inline style for the specific stat color */}
-        <div
-          className="p-3 rounded-lg"
-          style={{ backgroundColor: `${stat.color}20` }}
-        >
-          <Icon className="w-6 h-6" style={{ color: stat.color }} />
+      {/* Ambient glow */}
+      <div className="absolute -right-8 -top-8 w-24 h-24 bg-marketplace-accent/10 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-4">
+          {stat.icon && (
+            <div className="w-10 h-10 rounded-xl bg-marketplace-bg border border-marketplace-border flex items-center justify-center text-marketplace-accent">
+              {stat.icon}
+            </div>
+          )}
+          {changeValue && (
+            <div
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black ${isUp ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
+            >
+              {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+              {changeValue}
+            </div>
+          )}
         </div>
-
-        <div
-          className={`flex items-center gap-1 text-sm font-semibold ${
-            stat.trend === "up" ? "text-green-500" : "text-red-500"
-          }`}
-        >
-          <TrendIcon className="w-4 h-4" />
-          {stat.change}
-        </div>
-      </div>
-
-      <div className="text-3xl font-bold mb-1 text-marketplace-text-primary">
-        {stat.value}
-      </div>
-
-      <div className="text-sm text-marketplace-text-secondary">
-        {stat.label}
+        <p className="text-marketplace-text-secondary text-xs font-bold uppercase tracking-widest mb-1">
+          {stat.label}
+        </p>
+        <h3 className="text-3xl font-black text-marketplace-text-primary tracking-tight">
+          {typeof stat.value === "number"
+            ? stat.value.toLocaleString("ar-SA")
+            : stat.value}
+        </h3>
       </div>
     </motion.div>
   );

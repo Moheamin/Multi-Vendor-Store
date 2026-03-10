@@ -9,7 +9,7 @@ interface ProductModalProps {
     name: string;
     price: number;
     description: string;
-    image?: string;
+    image_url?: string;
     category?: string;
   } | null;
   isOpen: boolean;
@@ -56,9 +56,9 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
               <div className="grid md:grid-cols-2 gap-0 overflow-y-auto">
                 {/* 1. Product Image - Now on the Right for RTL flow */}
                 <div className="relative aspect-square bg-[var(--marketplace-bg)] overflow-hidden md:order-1">
-                  {product.image ? (
+                  {product.image_url ? (
                     <img
-                      src={product.image}
+                      src={product.image_url}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
@@ -98,7 +98,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
                       className="w-full flex items-center justify-center gap-3 bg-[var(--marketplace-accent)] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-[var(--marketplace-accent)]/20 hover:bg-[#00d4e8] transition-all"
                     >
                       <ShoppingCart className="w-6 h-6" />
-                      إضافة إلى السلة
+                      طلب المنتج
                     </motion.button>
                   </div>
                 </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react"; // Added hooks for hydration fix
 import { useTheme } from "next-themes";
 import {
   ArrowLeft,
@@ -12,7 +13,7 @@ import {
   Package,
   DollarSign,
   X,
-  ClipboardList, // New icon for requests
+  ClipboardList,
 } from "lucide-react";
 import type { TabType } from "../types";
 
@@ -24,10 +25,9 @@ interface SidebarProps {
   setIsOpen: (open: boolean) => void;
 }
 
-// Updated navigation items to include the new "Requests" tab
 const navigationItems = [
   { id: "overview" as const, label: "نظرة عامة", icon: TrendingUp },
-  { id: "requests" as const, label: "طلبات المتاجر", icon: ClipboardList }, // Added this
+  { id: "requests" as const, label: "طلبات المتاجر", icon: ClipboardList },
   { id: "users" as const, label: "المستخدمين", icon: Users },
   { id: "stores" as const, label: "المتاجر", icon: Store },
   { id: "products" as const, label: "المنتجات", icon: Package },
@@ -42,6 +42,12 @@ export function Sidebar({
   setIsOpen,
 }: SidebarProps) {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false); // [1] Initialize mounted state
+
+  // [2] Set mounted to true once the component reaches the client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <aside
@@ -52,7 +58,7 @@ export function Sidebar({
       <div className="flex items-center justify-between mb-8">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 transition-colors text-sidebar-foreground hover:text-marketplace-accent"
+          className="flex cursor-pointer items-center gap-2 transition-colors text-sidebar-foreground hover:text-marketplace-accent"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm">العودة للسوق</span>
@@ -61,13 +67,18 @@ export function Sidebar({
         <div className="flex gap-2">
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 rounded-lg bg-sidebar-accent text-sidebar-primary"
+            className="p-2 cursor-pointer rounded-lg bg-sidebar-accent text-sidebar-primary hover:scale-103"
           >
-            <Sun className="w-4 h-4 hidden dark:block" />
-            <Moon className="w-4 h-4 block dark:hidden" />
+            {/* [3] Fix: Only render icons if mounted is true */}
+            {!mounted ? (
+              <div className="w-4 h-4" /> // Empty placeholder with same dimensions
+            ) : theme === "dark" ? (
+              <Sun className="w-4 h-4" />
+            ) : (
+              <Moon className="w-4 h-4" />
+            )}
           </button>
 
-          {/* Close button for mobile only */}
           <button
             onClick={() => setIsOpen(false)}
             className="md:hidden p-2 text-sidebar-foreground"
@@ -98,7 +109,7 @@ export function Sidebar({
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
                 isActive
                   ? "bg-marketplace-accent text-white shadow-lg shadow-marketplace-accent/20 scale-[1.02]"
                   : "text-sidebar-foreground hover:bg-sidebar-accent"

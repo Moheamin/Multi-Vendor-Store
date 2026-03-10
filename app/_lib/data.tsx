@@ -1,11 +1,12 @@
 import {
   getDashboardStats,
-  getRecentUsers,
-  getTopStores,
   getRevenueChartData,
+  getGrowthMetrics,
+  getRecentUsers,
+  getAdminStores,
   getInventoryWarnings,
-  getGrowthMetrics, // Imported new function
-} from "@/app/_lib/data-service";
+  getTopStores,
+} from "@/app/_lib/data-services/dashboard-service";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
 
@@ -14,6 +15,9 @@ import { ar } from "date-fns/locale";
  */
 export async function getDashboardData() {
   // 1. Fetch Raw Data in Parallel for Performance
+
+  const adminStoreData = await getAdminStores();
+
   const [
     stats,
     growth,
@@ -21,6 +25,7 @@ export async function getDashboardData() {
     topStores,
     revenueChart,
     lowStockProducts,
+    adminStores,
   ] = await Promise.all([
     getDashboardStats(),
     getGrowthMetrics(),
@@ -28,6 +33,7 @@ export async function getDashboardData() {
     getTopStores(),
     getRevenueChartData(),
     getInventoryWarnings(),
+    getAdminStores(),
   ]);
 
   // 2. Format Stats Cards with Real Growth
@@ -67,17 +73,21 @@ export async function getDashboardData() {
   ];
 
   // 3. Format Users Table
-  const usersData = recentUsers.map((user) => ({
+  const usersData = recentUsers.map((user: any) => ({
     id: user.id,
     name: user.full_name || "مستخدم جديد",
-    email: user.phone || "بدون هاتف",
+    email: user.email || "بدون بريد",
+    phone: user.phone || "بدون رقم هاتف",
+    date: user.created_at || new Date().toISOString(),
     role:
       user.role === "seller"
         ? "تاجر"
         : user.role === "admin"
           ? "مدير"
-          : "مشتري",
-    status: "نشط",
+          : user.role === "buyer"
+            ? "مشتري"
+            : "زائر",
+    status: user.status ? "نشط" : "غير نشط",
     joined: formatDistanceToNow(new Date(user.created_at), {
       addSuffix: true,
       locale: ar,
@@ -94,8 +104,27 @@ export async function getDashboardData() {
     status: store.is_active ? "نشط" : "غير نشط",
   }));
 
+  const storeTabData = adminStores.map((store: any) => ({
+    id: store.id,
+    name: store.name,
+    ownerId: store.owner_id,
+    dealerName: store.dealer_name,
+    productCount: store.product_count,
+    totalRevenue: store.total_revenue,
+    slug: store.slug,
+    phone: store.phone,
+    description: store.description,
+    isActive: store.is_active,
+    createdAt: store.created_at,
+    monthlyHostingFee: store.monthly_hosting_fee,
+    commissionFeePerSale: store.commission_fee_per_sale,
+    address: store.address,
+    logoUrl: store.logo_url,
+    isOfficial: store.is_official,
+  }));
+
   // 5. Format Products
-  const productsData = lowStockProducts.map((prod) => {
+  const productsData = lowStockProducts.map((prod: any) => {
     let statusLabel = "متوفر";
     if (prod.stock_quantity === 0) statusLabel = "نفذ المخزون";
     else if (prod.stock_quantity < 5) statusLabel = "مخزون منخفض";
@@ -125,5 +154,7 @@ export async function getDashboardData() {
     storesData,
     productsData,
     revenueData,
+    storeTabData,
+    adminStoreData,
   };
 }

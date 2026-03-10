@@ -27,7 +27,7 @@ export function ModeToggle() {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="p-2.5 rounded-lg transition-all border border-[var(--border)]
+      className="p-2.5 cursor-pointer rounded-lg transition-all border border-[var(--border)]
         /* Theme aware backgrounds */
         bg-[var(--marketplace-bg)] hover:bg-[var(--marketplace-card-hover)]
         text-[var(--marketplace-accent)] shadow-sm

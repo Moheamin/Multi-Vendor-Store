@@ -23,12 +23,12 @@ import Link from "next/link";
 import { InfoItem } from "@/app/_components/ui/product/InfoItem";
 import { AddProductModal } from "@/app/_components/ui/product/AddProductModal";
 import { ProductModal } from "@/app/_components/ui/product/ProductModal";
+import { updateStoreData } from "@/app/_lib/data-services/store-service";
 import {
-  updateStoreData,
   getOwnerPhone,
   uploadAvatar,
-} from "@/app/_lib/data-service";
-import { supabase } from "@/app/_lib/supabase";
+} from "@/app/_lib/data-services/profile-service";
+import { supabase } from "@/app/_lib/supabase/client";
 import { ProductCard } from "../product/ProductCard";
 
 export default function StoreClientWrapper({

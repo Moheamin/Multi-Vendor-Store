@@ -1,121 +1,120 @@
-import { motion } from "motion/react";
-import { Eye, Info, Ban, Edit, Trash2, MoreVertical } from "lucide-react";
+"use client";
 
-interface ActionConfig {
-  icon: typeof Eye | typeof Info | typeof Ban | typeof Edit | typeof Trash2;
-  color: string;
-  hoverBg: string; // Now uses standard tailwind classes
-  title: string;
-  delay: number;
+import { motion, AnimatePresence } from "framer-motion";
+import { Pencil, Trash2, CheckCircle, XCircle } from "lucide-react";
+
+export interface Action {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  variant?: "default" | "danger" | "success";
 }
 
 interface TableActionsProps {
-  isHovered: boolean;
-  actions: ActionConfig[];
+  actions: Action[];
 }
 
-export function TableActions({ isHovered, actions }: TableActionsProps) {
-  if (!isHovered) {
-    return (
-      <div className="flex justify-end">
-        <button className="p-2 rounded-lg transition-colors hover:bg-marketplace-card-hover">
-          <MoreVertical className="w-5 h-5 text-marketplace-text-secondary" />
-        </button>
-      </div>
-    );
-  }
-
+export function TableActions({ actions }: TableActionsProps) {
   return (
-    <div className="flex items-center gap-2 justify-end">
-      {actions.map((action, index) => {
-        const Icon = action.icon;
-        return (
-          <motion.button
-            key={index}
-            initial={{ opacity: 0, x: 5 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: action.delay }}
-            className={`p-1.5 ${action.hoverBg} rounded-md transition-colors`}
-            title={action.title}
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, x: 10 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 10 }}
+        className="flex items-center gap-1.5"
+      >
+        {actions.map((action, i) => (
+          <button
+            key={i}
+            onClick={(e) => {
+              e.stopPropagation();
+              action.onClick();
+            }}
+            title={action.label}
+            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${
+              action.variant === "danger"
+                ? "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20"
+                : action.variant === "success"
+                  ? "bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20"
+                  : "bg-marketplace-bg border-marketplace-border text-marketplace-text-secondary hover:text-marketplace-accent hover:border-marketplace-accent/30"
+            }`}
           >
-            <Icon className={`w-4 h-4 ${action.color}`} />
-          </motion.button>
-        );
-      })}
-    </div>
+            {action.icon}
+          </button>
+        ))}
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
-// Predefined action configurations
-// Note: We use standard theme colors which work in both modes
-export const userActions: ActionConfig[] = [
-  {
-    icon: Eye,
-    color: "text-marketplace-accent",
-    hoverBg: "hover:bg-marketplace-accent/10",
-    title: "عرض المستخدم",
-    delay: 0.05,
-  },
-  {
-    icon: Info,
-    color: "text-marketplace-accent",
-    hoverBg: "hover:bg-marketplace-accent/10",
-    title: "التفاصيل",
-    delay: 0.1,
-  },
-  {
-    icon: Ban,
-    color: "text-red-500 dark:text-red-400",
-    hoverBg: "hover:bg-red-500/10",
-    title: "تعليق",
-    delay: 0.15,
-  },
-];
+export function buildUserActions(
+  user: any,
+  onEdit: (user: any) => void,
+  onDelete: (user: any) => void,
+): Action[] {
+  return [
+    { label: "تعديل", icon: <Pencil size={14} />, onClick: () => onEdit(user) },
+    {
+      label: "حذف",
+      icon: <Trash2 size={14} />,
+      onClick: () => onDelete(user),
+      variant: "danger",
+    },
+  ];
+}
 
-export const storeActions: ActionConfig[] = [
-  {
-    icon: Eye,
-    color: "text-marketplace-accent",
-    hoverBg: "hover:bg-marketplace-accent/10",
-    title: "عرض المتجر",
-    delay: 0.05,
-  },
-  {
-    icon: Info,
-    color: "text-marketplace-accent",
-    hoverBg: "hover:bg-marketplace-accent/10",
-    title: "التفاصيل",
-    delay: 0.1,
-  },
-  {
-    icon: Ban,
-    color: "text-red-500 dark:text-red-400",
-    hoverBg: "hover:bg-red-500/10",
-    title: "تعليق",
-    delay: 0.15,
-  },
-];
+export function buildStoreActions(
+  store: any,
+  onEdit: (store: any) => void,
+  onDelete: (store: any) => void,
+  onToggleActive: (store: any) => void,
+): Action[] {
+  // Use 'isActive' instead of 'is_active' to match your row mapping
+  const active = store.isActive;
 
-export const productActions: ActionConfig[] = [
-  {
-    icon: Eye,
-    color: "text-marketplace-accent",
-    hoverBg: "hover:bg-marketplace-accent/10",
-    title: "عرض المنتج",
-    delay: 0.05,
-  },
-  {
-    icon: Edit,
-    color: "text-blue-500 dark:text-blue-400",
-    hoverBg: "hover:bg-blue-500/10",
-    title: "تعديل",
-    delay: 0.1,
-  },
-  {
-    icon: Trash2,
-    color: "text-red-500 dark:text-red-400",
-    hoverBg: "hover:bg-red-500/10",
-    title: "حذف",
-    delay: 0.15,
-  },
-];
+  return [
+    {
+      label: "تعديل",
+      icon: <Pencil size={14} />,
+      onClick: () => onEdit(store),
+    },
+    {
+      label: active ? "تعطيل" : "تفعيل",
+      icon: active ? <XCircle size={14} /> : <CheckCircle size={14} />,
+      onClick: () => onToggleActive(store),
+      // This will now correctly toggle the variant color
+      variant: active ? "danger" : "success",
+    },
+    {
+      label: "حذف",
+      icon: <Trash2 size={14} />,
+      onClick: () => onDelete(store),
+      variant: "danger",
+    },
+  ];
+}
+
+export function buildProductActions(
+  product: any,
+  onEdit: (product: any) => void,
+  onDelete: (product: any) => void,
+): Action[] {
+  return [
+    {
+      label: "تعديل",
+      icon: <Pencil size={14} />,
+      onClick: () => onEdit(product),
+    },
+    {
+      label: "حذف",
+      icon: <Trash2 size={14} />,
+      onClick: () => onDelete(product),
+      variant: "danger",
+    },
+  ];
+}
+
+// Legacy (keep for backward compat if needed)
+export const userActions: Action[] = [];
+export const storeActions: Action[] = [];
+export const productActions: Action[] = [];

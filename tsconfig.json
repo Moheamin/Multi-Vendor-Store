@@ -29,7 +29,8 @@
     "**/*.mts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "app/_lib/supabase.js"
+    "app/_lib/supabase/client.ts",
+    "app/_lib/data-services/dashboard-service.ts"
   ],
   "exclude": ["node_modules"]
 }

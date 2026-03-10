@@ -1,6 +1,7 @@
 "use client";
 
-import { getStores, getUser } from "@/app/_lib/data-service";
+import { getUser } from "@/app/_lib/data-services/auth-service";
+import { getStores } from "@/app/_lib/data-services/store-service";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,

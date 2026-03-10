@@ -1,26 +1,32 @@
 "use client";
+
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
+import { X, Upload, Loader2, DollarSign, Edit3 } from "lucide-react";
 import {
-  X,
-  Upload,
-  Loader2,
-  DollarSign,
-  Edit3,
-  AlignRight,
-} from "lucide-react";
-import { createProduct, uploadProductImage } from "@/app/_lib/data-service";
+  createProduct,
+  uploadProductImage,
+} from "@/app/_lib/data-services/product-service";
+import { loadHeic2any } from "@/app/_components/image/loadHeic2any";
+import { resizeImageForStorage } from "@/app/_components/image/resizeImageForStorage";
+type AddProductModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  storeId: string;
+  onProductAdded: (product: unknown) => void;
+};
 
 export function AddProductModal({
   isOpen,
   onClose,
   storeId,
   onProductAdded,
-}: any) {
+}: AddProductModalProps) {
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -31,35 +37,72 @@ export function AddProductModal({
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
   if (!isOpen) return null;
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (event) => setPreview(event.target?.result as string);
-      reader.readAsDataURL(file);
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    let file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    try {
+      let processedFile = file;
+
+      // 1. Handle HEIC if necessary
+      if (
+        file.type === "image/heic" ||
+        file.name.toLowerCase().endsWith(".heic")
+      ) {
+        const heic2any = await loadHeic2any();
+        const convertedBlob = await heic2any({
+          blob: file,
+          toType: "image/jpeg",
+        });
+        processedFile = new File(
+          Array.isArray(convertedBlob) ? convertedBlob : [convertedBlob],
+          file.name.replace(/\.[^.]+$/, ".jpg"),
+          { type: "image/jpeg" },
+        );
+      }
+
+      // 2. Resize and Convert to WebP (This replaces 'normalizeImage')
+      const finalFile = await resizeImageForStorage(processedFile, 2000);
+
+      // 3. Update State
+      setImageFile(finalFile);
+      setPreview(URL.createObjectURL(finalFile));
+    } catch (error) {
+      console.error("Image processing failed:", error);
+      alert("حدث خطأ أثناء معالجة الصورة");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storeId) return;
+
     setLoading(true);
     try {
-      const newProduct = await createProduct({
-        ...formData,
-        price: parseFloat(formData.price) || 0,
-        store_id: storeId,
-      });
+      let imageUrl: string | null = null;
+
       if (imageFile) {
-        await uploadProductImage(imageFile);
+        imageUrl = await uploadProductImage(imageFile);
       }
+
+      const newProduct = await createProduct({
+        name: formData.name,
+        price: parseFloat(formData.price) || 0,
+        description: formData.description,
+        store_id: storeId,
+        image_url: imageUrl || undefined, // ✅ use image_url (not image)
+      });
+
       onProductAdded(newProduct);
       onClose();
     } catch (err: any) {
@@ -88,6 +131,7 @@ export function AddProductModal({
           <button
             onClick={onClose}
             className="p-2 cursor-pointer text-marketplace-text-secondary hover:text-marketplace-text-primary hover:bg-marketplace-card-hover rounded-full transition-all"
+            type="button"
           >
             <X size={24} />
           </button>
@@ -112,6 +156,7 @@ export function AddProductModal({
                 </span>
               </div>
             )}
+
             <input
               type="file"
               ref={fileInputRef}
@@ -136,6 +181,7 @@ export function AddProductModal({
                 }
               />
             </div>
+
             <div className="relative">
               <DollarSign
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary"
@@ -151,6 +197,7 @@ export function AddProductModal({
                 }
               />
             </div>
+
             <textarea
               placeholder="وصف المنتج..."
               className="w-full bg-marketplace-bg/50 p-6 rounded-xl border border-marketplace-border outline-none focus:border-marketplace-accent h-32 resize-none transition-all text-marketplace-text-primary placeholder:text-marketplace-text-secondary"
@@ -163,6 +210,7 @@ export function AddProductModal({
           <button
             disabled={loading}
             className="w-full bg-marketplace-accent text-primary-foreground py-5 rounded-xl font-black hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            type="submit"
           >
             {loading ? <Loader2 className="animate-spin" /> : "نشر المنتج"}
           </button>
