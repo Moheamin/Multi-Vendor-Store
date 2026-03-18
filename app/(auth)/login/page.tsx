@@ -6,6 +6,37 @@ import { useRouter } from "next/navigation";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import { signIn } from "@/app/_lib/data-services/auth-service";
 import { supabase } from "@/app/_lib/supabase/client"; // Ensure you import your client
+import { LogoIcon } from "@/app/_components/reuseable/LogoIcon";
+
+function getArabicAuthError(message?: string) {
+  if (!message) return "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.";
+
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("invalid login credentials") ||
+    lower.includes("invalid_credentials")
+  ) {
+    return "بيانات تسجيل الدخول غير صحيحة. تأكد من البريد الإلكتروني وكلمة المرور ثم حاول مرة أخرى.";
+  }
+
+  if (
+    lower.includes("email not confirmed") ||
+    lower.includes("email_not_confirmed")
+  ) {
+    return "لم يتم تأكيد البريد الإلكتروني بعد. يرجى فتح رسالة التأكيد في بريدك أولاً.";
+  }
+
+  if (lower.includes("too many requests")) {
+    return "تمت محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة.";
+  }
+
+  if (lower.includes("network") || lower.includes("fetch")) {
+    return "تعذر الاتصال بالخادم. يرجى التحقق من الإنترنت ثم المحاولة مرة أخرى.";
+  }
+
+  return "تعذر تسجيل الدخول حالياً. تحقق من البيانات وحاول مرة أخرى.";
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,7 +57,7 @@ export default function LoginPage() {
       router.push("/");
       router.refresh();
     } catch (err: any) {
-      setError(err.message || "حدث خطأ أثناء تسجيل الدخول");
+      setError(getArabicAuthError(err?.message));
     } finally {
       setLoading(false);
     }
@@ -55,7 +86,7 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      setError(getArabicAuthError(error.message));
     } else {
       setMessage("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني");
     }
@@ -68,8 +99,10 @@ export default function LoginPage() {
       dir="rtl"
     >
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-gradient-to-br from-marketplace-accent to-[#0097a7] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-marketplace-accent/20">
-          <span className="text-3xl font-bold text-white">س</span>
+        <div className="inline-flex items-center gap-3 mb-4 group">
+          <div className="w-15 h-15 rounded-[12px] bg-marketplace-accent/5 border border-marketplace-accent/10 flex items-center justify-center shadow-sm backdrop-blur-sm transition-all duration-300 group-hover:bg-marketplace-accent/10 group-hover:border-marketplace-accent/30 group-hover:scale-105">
+            <LogoIcon className="w-10 h-10 text-marketplace-text-primary group-hover:text-marketplace-accent transition-colors duration-300" />
+          </div>
         </div>
         <h1 className="text-2xl font-bold text-marketplace-text-primary">
           تسجيل الدخول

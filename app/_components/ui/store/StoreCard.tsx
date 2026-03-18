@@ -2,11 +2,12 @@
 
 import { Badge } from "@/app/_components/shadCN-ui/badge";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 
 export function StoreCard({ store }: any) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   return (
     <motion.div
@@ -27,20 +28,36 @@ export function StoreCard({ store }: any) {
       )}
 
       {/* Image Container */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted/10">
         {store.logo_url ? (
-          <img
-            src={store.logo_url}
-            alt={store.name}
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-          />
+          <>
+            {/* Loading Skeleton */}
+            <AnimatePresence>
+              {!isLoaded && (
+                <motion.div
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-marketplace-accent/5 animate-pulse"
+                />
+              )}
+            </AnimatePresence>
+
+            <motion.img
+              src={store.logo_url}
+              alt={store.name}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isLoaded ? 1 : 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              onLoad={() => setIsLoaded(true)}
+              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+            />
+          </>
         ) : (
           <div className="w-full h-full bg-muted/20 flex items-center justify-center">
             <div className="w-16 h-16 bg-marketplace-accent/10 rounded-full animate-pulse" />
           </div>
         )}
         {/* Subtle Overlay Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-marketplace-card via-transparent to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-marketplace-card via-transparent to-transparent opacity-60 z-10" />
       </div>
 
       <div className="p-6 text-right">

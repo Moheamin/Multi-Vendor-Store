@@ -1,0 +1,17 @@
+{
+  "name": "Sinaa Link",
+  "short_name": "Sinaa",
+  "description": "متجر متعدد البائعين يربط بين المشترين والبائعين في سوق صناعية حيوية، حيث يمكن للبائعين عرض منتجاتهم وخدماتهم، وللمشترين اكتشاف وشراء ما يحتاجونه بسهولة وأمان.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#00bcd4",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

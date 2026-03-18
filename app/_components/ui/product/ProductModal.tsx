@@ -37,7 +37,7 @@ export function ProductModal({
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const ADMIN_WHATSAPP = "9647753963706";
+  const ADMIN_WHATSAPP = "9647717333838";
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));

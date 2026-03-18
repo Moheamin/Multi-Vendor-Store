@@ -33,7 +33,7 @@ export default function DashboardClientWrapper({
       {/* MOBILE HEADER TOGGLE */}
       <div className="md:hidden fixed top-4 right-4 z-[60]">
         <button
-          onClick={() => setIsSidebarOpen(true)}
+          onClick={() => setIsSidebarOpen((prev) => !prev)}
           className="p-3 cursor-pointer rounded-2xl bg-marketplace-card border border-marketplace-border shadow-lg text-marketplace-accent"
         >
           <Menu size={24} />

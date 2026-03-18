@@ -48,37 +48,31 @@ serve(async (req) => {
           to: [{ email: email }],
           subject: "Confirm your delivery | تأكيد استلام الطلب",
           htmlContent: `
-            <div dir="rtl" style="font-family: 'Segoe UI', sans-serif; padding: 40px 20px; background-color: #f4f7f9; text-align: center;">
-              <div style="max-width: 550px; margin: 0 auto; background-color: #ffffff; padding: 48px; border-radius: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); border: 1px solid #eef2f6;">
-                <div style="margin-bottom: 32px;">
-                  <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
-                  <h1 style="color: #030213; font-size: 26px; font-weight: 800; margin: 0;">تأكيد حالة الطلب</h1>
-                </div>
-                
-                <p style="color: #64748b; font-size: 16px; line-height: 1.8; margin-bottom: 32px;">
-                  مرحباً <strong>${order.profiles?.full_name || "عزيزي الزبون"}</strong>،<br>
-                  نود التأكد من وصول طلبك بشكل سليم لضمان حقوقك وحقوق التاجر. يرجى اختيار الحالة أدناه:
-                </p>
+            <div style="direction: rtl; font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 24px; background-color: #0a0a0a; border-radius: 24px; border: 1px solid #1f1f1f; text-align: center;">
+  
+  <div style="margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+    <div style="display: inline-block; letter-spacing: 1px;">
+      <span style="color: #ffffff; font-size: 14px; font-weight: 300; text-transform: uppercase; letter-spacing: 2px;">Sina Link</span>
+      <span style="color: #00bcd4; margin: 0 12px; font-size: 18px; font-weight: 200;">|</span>
+      <span style="color: #ffffff; font-size: 18px; font-weight: 800;">لنك الصناعة</span>
+    </div>
+  </div>
 
-                <div style="margin-bottom: 16px;">
-                  <a href="${APP_URL}/api/confirm-order?id=${order.id}&type=confirm" 
-                     style="display: block; background-color: #00bcd4; color: #ffffff; padding: 18px; text-decoration: none; border-radius: 18px; font-weight: bold; font-size: 16px; box-shadow: 0 10px 20px rgba(0, 188, 212, 0.2);">
-                    نعم، تم الاستلام بنجاح ✅
-                  </a>
-                </div>
+  <h3 style="color: #ffffff; margin-bottom: 24px; font-size: 18px; font-weight: 600;">تأكيد استلام الطلب</h3>
 
-                <div>
-                  <a href="${APP_URL}/api/confirm-order?id=${order.id}&type=dispute" 
-                     style="display: block; background-color: #ffffff; color: #ef4444; padding: 16px; text-decoration: none; border-radius: 18px; font-weight: bold; font-size: 15px; border: 2px solid #fee2e2;">
-                    لم أستلم الطلب بعد ❌
-                  </a>
-                </div>
+  <div style="margin-bottom: 16px;">
+    <a href="${APP_URL}/api/confirm-order?id=${order.id}&type=confirm" 
+       style="display: block; background: #00bcd4; color: #ffffff; padding: 18px; text-decoration: none; border-radius: 16px; font-weight: bold; font-size: 16px; box-shadow: 0 10px 20px rgba(0, 188, 212, 0.2);">
+      نعم، تم الاستلام بنجاح ✅
+    </a>
+  </div>
 
-                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
-                  <p style="font-size: 12px; color: #94a3b8; margin: 0;">إذا قمت بالتأكيد مسبقاً، يرجى تجاهل هذا البريد.</p>
-                </div>
-              </div>
-            </div>`,
+  <a href="${APP_URL}/api/confirm-order?id=${order.id}&type=dispute" 
+     style="display: block; background-color: transparent; color: #94a3b8; padding: 16px; text-decoration: none; border-radius: 16px; font-weight: 500; font-size: 14px; border: 1px solid #1f1f1f;">
+    لم أستلم الطلب بعد ❌
+  </a>
+</div>
+`,
         }),
       });
       return res.ok ? order.id : null;

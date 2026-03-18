@@ -1,7 +1,8 @@
 "use client";
 
 import { AlertTriangle, Ban } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
+import { useState } from "react";
 
 interface ProductCardProps {
   product: {
@@ -18,6 +19,7 @@ interface ProductCardProps {
 const LOW_STOCK_THRESHOLD = 5;
 
 export function ProductCard({ product, isOwner = false }: ProductCardProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
   const stock = product.stock_quantity ?? null;
   const isOutOfStock = stock !== null && stock === 0;
   const isLowStock =
@@ -38,15 +40,31 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
       `}
     >
       {/* ── Image ── */}
-      <div className="relative aspect-square overflow-hidden m-2 rounded-2xl">
+      <div className="relative aspect-square overflow-hidden m-2 rounded-2xl bg-muted/10">
         {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className={`w-full h-full object-cover transition-transform duration-500 ${
-              !isOutOfStock ? "group-hover:scale-110" : ""
-            }`}
-          />
+          <>
+            {/* Loading Skeleton */}
+            <AnimatePresence>
+              {!isLoaded && (
+                <motion.div
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-marketplace-accent/5 animate-pulse flex items-center justify-center"
+                />
+              )}
+            </AnimatePresence>
+
+            <motion.img
+              src={product.image_url}
+              alt={product.name}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isLoaded ? 1 : 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              onLoad={() => setIsLoaded(true)}
+              className={`w-full h-full object-cover transition-transform duration-500 ${
+                !isOutOfStock && isLoaded ? "group-hover:scale-110" : ""
+              }`}
+            />
+          </>
         ) : (
           <div className="w-full h-full bg-muted/10 flex items-center justify-center" />
         )}
@@ -63,7 +81,7 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
 
         {/* Low stock badge */}
         {isLowStock && !isOutOfStock && (
-          <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg">
+          <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg z-10">
             <AlertTriangle size={11} className="shrink-0" />
             <span>{isOwner ? `${stock} متبقية فقط` : "كمية محدودة"}</span>
           </div>
@@ -71,7 +89,7 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
 
         {/* Owner: show stock count badge (always) */}
         {isOwner && !isLowStock && !isOutOfStock && stock !== null && (
-          <div className="absolute top-2 right-2 bg-marketplace-card/80 backdrop-blur-sm border border-marketplace-border text-marketplace-text-secondary text-[10px] font-bold px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-2 right-2 bg-marketplace-card/80 backdrop-blur-sm border border-marketplace-border text-marketplace-text-secondary text-[10px] font-bold px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10">
             {stock} في المخزن
           </div>
         )}

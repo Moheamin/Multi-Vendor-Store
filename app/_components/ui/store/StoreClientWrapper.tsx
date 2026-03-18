@@ -398,7 +398,7 @@ export default function StoreClientWrapper({
                   >
                     {/* Owner action overlay (z-30 to stay clickable above out-of-stock overlay) */}
                     {isOwner && (
-                      <div className="absolute top-3 left-3 z-30 flex gap-2 opacity-0 group-hover/card:opacity-100 transition-all duration-200">
+                      <div className="absolute top-3 left-3 z-30 flex gap-2 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all duration-200">
                         {/* Edit */}
                         <button
                           onClick={(e) => {

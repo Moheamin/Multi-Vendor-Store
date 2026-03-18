@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Mail, Lock, Loader2, CheckCircle2 } from "lucide-react";
 import { signUp } from "@/app/_lib/data-services/auth-service";
+import { LogoIcon } from "@/app/_components/reuseable/LogoIcon";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -82,6 +83,11 @@ export default function RegisterPage() {
       dir="rtl"
     >
       <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-3 mb-4 group">
+          <div className="w-15 h-15 rounded-[12px] bg-marketplace-accent/5 border border-marketplace-accent/10 flex items-center justify-center shadow-sm backdrop-blur-sm transition-all duration-300 group-hover:bg-marketplace-accent/10 group-hover:border-marketplace-accent/30 group-hover:scale-105">
+            <LogoIcon className="w-10 h-10 text-marketplace-text-primary group-hover:text-marketplace-accent transition-colors duration-300" />
+          </div>
+        </div>
         <h1 className="text-2xl font-bold text-marketplace-text-primary">
           إنشاء حساب جديد
         </h1>

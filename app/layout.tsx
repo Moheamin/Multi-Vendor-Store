@@ -74,10 +74,7 @@ export const metadata: Metadata = {
 
   // Canonical URL
   alternates: {
-    canonical: "https://yourdomain.com/",
-    languages: {
-      "en-US": "https://yourdomain.com/",
-    },
+    canonical: "https://www.sinaal.ink",
   },
 
   // Category
@@ -87,14 +84,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://yourdomain.com/",
+    url: "https://www.sinaal.ink/",
     title: " Sinna Link |  multi-vendor marketplace",
     description:
       "متجر متعدد البائعين يربط بين المشترين والبائعين في سوق صناعية حيوية، حيث يمكن للبائعين عرض منتجاتهم وخدماتهم، وللمشترين اكتشاف وشراء ما يحتاجونه بسهولة وأمان. يوفر منصة شاملة للتجارة الإلكترونية تجمع بين التنوع والسهولة في تجربة التسوق.",
     siteName: "Sinaa Link",
     images: [
       {
-        url: "https://yourdomain.com/og-image.png",
+        url: "https://www.sinaal.ink/og-image.png",
         width: 1200,
         height: 630,
         alt: "Sinaa Link - multi-vendor marketplace",
@@ -109,7 +106,7 @@ export const metadata: Metadata = {
     title: "Sinaa Link | multi-vendor marketplace",
     description:
       "متجر متعدد البائعين يربط بين المشترين والبائعين في سوق صناعية حيوية، حيث يمكن للبائعين عرض منتجاتهم وخدماتهم، وللمشترين اكتشاف وشراء ما يحتاجونه بسهولة وأمان. يوفر منصة شاملة للتجارة الإلكترونية تجمع بين التنوع والسهولة في تجربة التسوق.",
-    images: ["https://yourdomain.com/og-image.png"],
+    images: ["https://www.sinaal.ink/og-image.png"],
     creator: "@_moheamin_", // Optional
   },
 
@@ -139,12 +136,12 @@ export default function RootLayout({
     "@type": "Person",
     name: "Mohyaman Rayed",
     jobTitle: "Programmer",
-    url: "https://yourdomain.com/",
-    image: "https://yourdomain.com/og-image.png",
+    url: "https://www.sinaal.ink/",
+    image: "https://www.sinaal.ink/og-image.png",
     sameAs: [
-      "https://github.com/yourusername",
-      "https://linkedin.com/in/yourusername",
-      "https://twitter.com/yourusername",
+      "https://github.com/Moheamin",
+      "https://linkedin.com/in/moheaminrayed20",
+
       // Add all your social profiles
     ],
     knowsAbout: [
@@ -177,13 +174,14 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "Sinaa Link",
-    url: "https://yourdomain.com/",
-    description: "Site description",
+    url: "https://www.sinaal.ink/",
+    description:
+      "متجر متعدد البائعين يربط بين المشترين والبائعين في سوق صناعية حيوية، حيث يمكن للبائعين عرض منتجاتهم وخدماتهم، وللمشترين اكتشاف وشراء ما يحتاجونه بسهولة وأمان. يوفر منصة شاملة للتجارة الإلكترونية تجمع بين التنوع والسهولة في تجربة التسوق.",
     author: {
       "@type": "Person",
       name: "Mohyaman Rayed",
     },
-    inLanguage: "en-US",
+    inLanguage: "ar",
   };
 
   return (

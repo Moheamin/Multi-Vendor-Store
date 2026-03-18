@@ -11,7 +11,7 @@ import {
   Sun,
   TrendingUp,
   Users,
-  X,
+  X, // Changed to X for clear "Close" action
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -49,10 +49,7 @@ export function Sidebar({
   }, []);
 
   const handleTabClick = (id: TabType) => {
-    // 1. Change the actual view state
     onTabChange(id);
-
-    // 3. Close sidebar on mobile after clicking
     if (window.innerWidth < 768) {
       setIsOpen(false);
     }
@@ -60,21 +57,25 @@ export function Sidebar({
 
   return (
     <>
-      {/* MOBILE OVERLAY: This blurs the background so the white sidebar looks high-end */}
+      {/* MOBILE OVERLAY */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
-          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(false);
+          }}
         />
       )}
 
       <aside
-        className={`fixed right-0 top-0 h-full w-72 border-l z-50 transition-all duration-300 ease-in-out p-6 
+        className={`fixed right-0 top-0 h-full w-72 border-l z-50 transition-transform duration-300 ease-in-out p-6 
           bg-sidebar/95 backdrop-blur-md border-sidebar-border shadow-2xl
           ${isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"}`}
       >
         <div className="flex items-center justify-between mb-10">
           <button
+            type="button"
             onClick={onBack}
             className="flex cursor-pointer items-center gap-2 transition-colors text-sidebar-foreground/60 hover:text-marketplace-accent group"
           >
@@ -82,8 +83,9 @@ export function Sidebar({
             <span className="text-xs font-bold">العودة للسوق</span>
           </button>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 relative z-[60]">
             <button
+              type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="p-2 cursor-pointer rounded-xl bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent/80 transition-all active:scale-95"
             >
@@ -96,16 +98,23 @@ export function Sidebar({
               )}
             </button>
 
+            {/* THE MENU CLOSE BUTTON - BULLETPROOF VERSION */}
             <button
-              onClick={() => setIsOpen(false)}
-              className="md:hidden p-2 cursor-pointer text-sidebar-foreground/40 hover:text-destructive transition-colors"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault(); // Stops form submissions if wrapped in one
+                e.stopPropagation(); // Stops the click from firing parent events
+                console.log("Close button clicked!"); // Check your console to verify the click registers
+                setIsOpen(false);
+              }}
+              className="md:hidden flex items-center justify-center p-2 cursor-pointer rounded-xl bg-sidebar-accent/50 text-sidebar-foreground hover:bg-destructive hover:text-destructive-foreground transition-all active:scale-95"
             >
               <X size={20} />
             </button>
           </div>
         </div>
 
-        {/* ADMIN BADGE: Cleaned up for White Mode */}
+        {/* ADMIN BADGE */}
         <div className="flex items-center gap-3 mb-10 p-4 rounded-2xl border border-marketplace-accent/10 bg-gradient-to-l from-marketplace-accent/[0.05] to-transparent">
           <div className="bg-marketplace-accent/10 p-2 rounded-lg">
             <Shield className="w-5 h-5 text-marketplace-accent" />
@@ -120,15 +129,19 @@ export function Sidebar({
           </div>
         </div>
 
-        <nav className="space-y-1.5">
+        <nav className="space-y-1.5 relative z-50">
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
 
             return (
               <button
+                type="button"
                 key={item.id}
-                onClick={() => handleTabClick(item.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTabClick(item.id);
+                }}
                 className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-bold text-sm group relative
                   ${
                     isActive
