@@ -1,23 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
-import { motion } from "motion/react";
 import { signIn } from "@/app/_lib/data-services/auth-service";
+import { supabase } from "@/app/_lib/supabase/client"; // Ensure you import your client
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setMessage(null);
     try {
       await signIn({ email, password });
       router.push("/");
@@ -27,6 +30,36 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        console.log("Password recovery session ready");
+      }
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError("يرجى إدخال بريدك الإلكتروني أولاً");
+      return;
+    }
+    setResetLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني");
+    }
+    setResetLoading(false);
   };
 
   return (
@@ -51,6 +84,11 @@ export default function LoginPage() {
           {error}
         </div>
       )}
+      {message && (
+        <div className="mb-6 p-3 bg-green-500/10 border border-green-500/50 text-green-500 text-sm rounded-xl text-center">
+          {message}
+        </div>
+      )}
 
       <form className="space-y-5" onSubmit={handleSubmit}>
         <div>
@@ -71,9 +109,19 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-marketplace-text-secondary mb-2 mr-1">
-            كلمة المرور
-          </label>
+          <div className="flex justify-between items-center mb-2 mr-1">
+            <label className="block text-sm font-medium text-marketplace-text-secondary">
+              كلمة المرور
+            </label>
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={resetLoading}
+              className="cursor-pointer text-xs text-marketplace-accent hover:underline disabled:opacity-50"
+            >
+              {resetLoading ? "جاري الإرسال..." : "نسيت كلمة المرور؟"}
+            </button>
+          </div>
           <div className="relative">
             <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
@@ -90,15 +138,9 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-marketplace-accent to-[#0097a7] text-white font-bold py-3 rounded-xl shadow-lg shadow-marketplace-accent/20 hover:opacity-90 transition-opacity mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+          className="w-full flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-marketplace-accent to-[#0097a7] text-white font-bold py-3 rounded-xl shadow-lg shadow-marketplace-accent/20 hover:opacity-90 transition-opacity mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          {loading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" /> جاري الدخول...
-            </>
-          ) : (
-            "دخول"
-          )}
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "دخول"}
         </button>
       </form>
 
@@ -116,8 +158,7 @@ export default function LoginPage() {
           href="/"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-marketplace-text-primary mt-6 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
-          العودة للرئيسية
+          <ArrowLeft className="w-4 h-4" /> العودة للرئيسية
         </Link>
       </div>
     </div>

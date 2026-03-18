@@ -1,37 +1,52 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  Package,
-  Plus,
-  Store,
-  Tag,
-  AlertTriangle,
-  CheckCircle,
-  Filter,
-  Check,
-} from "lucide-react";
-import { TableActions, buildProductActions } from "../components/TableActions";
-import { ProductModal } from "../components/ProductModal";
-import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import {
   adminDeleteProduct,
   getAdminProducts,
 } from "@/app/_lib/data-services/admin-service";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle,
+  Filter,
+  Package,
+  Plus,
+  Search,
+  Store,
+  Tag,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
+import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
+import { ProductModal } from "../components/ProductModal";
+import { TableActions, buildProductActions } from "../components/TableActions";
 
 export function ProductsTab({ data: initialData }: { data: any[] }) {
   const [data, setData] = useState<any[]>(initialData);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Category Filter State
   const [activeFilter, setActiveFilter] = useState("الكل");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+
+  // Store Filter State
+  const [activeStoreFilter, setActiveStoreFilter] = useState("الكل");
+  const [isStoreFilterOpen, setIsStoreFilterOpen] = useState(false);
+  const storeFilterRef = useRef<HTMLDivElement>(null);
+
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
+
+  // Keep local state in sync with server state (Real-time update fix)
+  useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
 
   const categories = [
     "الكل",
@@ -42,29 +57,50 @@ export function ProductsTab({ data: initialData }: { data: any[] }) {
     ),
   ];
 
+  const stores = [
+    "الكل",
+    ...Array.from(
+      new Set(data.map((p) => p.store || p.stores?.name).filter(Boolean)),
+    ),
+  ];
+
   const filteredProducts = data.filter((product) => {
     const productName = product.name || "";
     const storeName = product.store || product.stores?.name || "";
+    const productCat = product.category || product.categories?.name || "";
+    const productStore = product.store || product.stores?.name || "";
+
     const matchesSearch =
       productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       storeName.toLowerCase().includes(searchQuery.toLowerCase());
-    const productCat = product.category || product.categories?.name || "";
-    const matchesFilter =
+
+    const matchesCategoryFilter =
       activeFilter === "الكل" || productCat === activeFilter;
-    return matchesSearch && matchesFilter;
+
+    const matchesStoreFilter =
+      activeStoreFilter === "الكل" || productStore === activeStoreFilter;
+
+    return matchesSearch && matchesCategoryFilter && matchesStoreFilter;
   });
 
   async function refreshData() {
     try {
-      const fresh = await getAdminProducts();
-      setData(fresh);
-    } catch {}
+      // Fetch fresh data immediately for instant frontend update, then trigger Next.js refresh
+      const updatedProducts = await getAdminProducts();
+      setData(updatedProducts);
+      router.refresh();
+    } catch {
+      // fallback to local refresh if router.refresh fails
+      const updatedProducts = await getAdminProducts();
+      setData(updatedProducts);
+    }
   }
 
   function handleEdit(product: any) {
     setSelectedProduct(product);
     setIsProductModalOpen(true);
   }
+
   function handleDeletePrompt(product: any) {
     setSelectedProduct(product);
     setIsDeleteModalOpen(true);
@@ -79,6 +115,7 @@ export function ProductsTab({ data: initialData }: { data: any[] }) {
       setData((prev) => prev.filter((p) => p.id !== selectedProduct.id));
       setIsDeleteModalOpen(false);
       setSelectedProduct(null);
+      router.refresh();
     } catch (err: any) {
       toast.error(err.message || "فشل الحذف");
     } finally {
@@ -103,10 +140,16 @@ export function ProductsTab({ data: initialData }: { data: any[] }) {
               className="w-full bg-marketplace-bg border border-transparent focus:border-marketplace-accent/20 rounded-2xl py-3 pr-11 pl-4 outline-none text-marketplace-text-primary font-bold transition-all"
             />
           </div>
+
+          {/* Category Filter */}
           <div className="relative" ref={filterRef}>
             <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              onClick={() => {
+                setIsFilterOpen(!isFilterOpen);
+                setIsStoreFilterOpen(false); // Close store filter if open
+              }}
               className={`p-3 rounded-2xl cursor-pointer border transition-all ${isFilterOpen ? "bg-marketplace-accent text-white border-marketplace-accent" : "bg-marketplace-bg text-marketplace-text-primary border-marketplace-border"}`}
+              title="تصفية حسب الفئة"
             >
               <Filter size={18} />
             </button>
@@ -133,6 +176,50 @@ export function ProductsTab({ data: initialData }: { data: any[] }) {
                         {cat}
                       </span>
                       {activeFilter === cat && (
+                        <Check size={14} className="text-marketplace-accent" />
+                      )}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Store Filter */}
+          <div className="relative" ref={storeFilterRef}>
+            <button
+              onClick={() => {
+                setIsStoreFilterOpen(!isStoreFilterOpen);
+                setIsFilterOpen(false); // Close category filter if open
+              }}
+              className={`p-3 rounded-2xl cursor-pointer border transition-all ${isStoreFilterOpen ? "bg-marketplace-accent text-white border-marketplace-accent" : "bg-marketplace-bg text-marketplace-text-primary border-marketplace-border"}`}
+              title="تصفية حسب المتجر"
+            >
+              <Store size={18} />
+            </button>
+            <AnimatePresence>
+              {isStoreFilterOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute left-0 mt-3 w-48 bg-marketplace-card border border-marketplace-border rounded-2xl shadow-xl overflow-hidden py-2 z-50"
+                >
+                  {stores.map((store) => (
+                    <button
+                      key={store}
+                      onClick={() => {
+                        setActiveStoreFilter(store);
+                        setIsStoreFilterOpen(false);
+                      }}
+                      className="w-full cursor-pointer flex items-center justify-between px-4 py-2.5 hover:bg-marketplace-card-hover transition-colors text-right"
+                    >
+                      <span
+                        className={`text-sm font-bold ${activeStoreFilter === store ? "text-marketplace-accent" : "text-marketplace-text-secondary"}`}
+                      >
+                        {store}
+                      </span>
+                      {activeStoreFilter === store && (
                         <Check size={14} className="text-marketplace-accent" />
                       )}
                     </button>
@@ -235,10 +322,15 @@ function ProductRow({
   const category = product.category || product.categories?.name || "—";
   const stock = product.stock ?? product.stock_quantity ?? 0;
   const priceDisplay = product.price
-    ? `${Number(product.price).toLocaleString()} ر.س`
-    : product.price_display || "—";
-  const statusLabel =
-    stock > 10 ? "متوفر" : stock > 0 ? "مخزون منخفض" : "نفذ المخزون";
+    ? `${Number(product.price).toLocaleString()} د.ع`
+    : product.price || "—";
+  const statusLabel = product.status
+    ? product.status
+    : stock > 10
+      ? "متوفر"
+      : stock > 0
+        ? "مخزون منخفض"
+        : "نفذ المخزون";
 
   return (
     <tr

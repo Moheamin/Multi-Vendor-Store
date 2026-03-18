@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, Loader2 } from "lucide-react";
 
 interface ConfirmDeleteModalProps {
@@ -55,14 +55,14 @@ export function ConfirmDeleteModal({
                 <button
                   onClick={onClose}
                   disabled={isLoading}
-                  className="flex-1 px-6 py-3 rounded-2xl border border-marketplace-border text-marketplace-text-primary font-bold hover:bg-marketplace-card-hover transition-all"
+                  className="flex-1 px-6 py-3 cursor-pointer rounded-2xl border border-marketplace-border text-marketplace-text-primary font-bold hover:bg-marketplace-card-hover transition-all"
                 >
                   إلغاء
                 </button>
                 <button
                   onClick={onConfirm}
                   disabled={isLoading}
-                  className="flex-1 px-6 py-3 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-3 cursor-pointer rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <Loader2 size={18} className="animate-spin" />

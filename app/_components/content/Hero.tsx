@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { getTotalCounts } from "@/app/_lib/data-services/store-service";
 import { Package, Store, Users } from "lucide-react";
 import { motion } from "motion/react";
-import { getTotalCounts } from "@/app/_lib/data-services/store-service";
+import { useEffect, useState } from "react";
 
 export function Hero() {
   const [counts, setCounts] = useState({ stores: 0, products: 0, sellers: 0 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useEffect } from "react";
 
@@ -70,7 +70,7 @@ export function Modal({
               </h2>
               <button
                 onClick={onClose}
-                className="w-9 h-9 rounded-xl bg-marketplace-bg border border-marketplace-border flex items-center justify-center text-marketplace-text-secondary hover:text-marketplace-accent hover:border-marketplace-accent/30 transition-all"
+                className="w-9 h-9 cursor-pointer rounded-xl bg-marketplace-bg border border-marketplace-border flex items-center justify-center text-marketplace-text-secondary hover:text-marketplace-accent hover:border-marketplace-accent/30 transition-all"
               >
                 <X size={16} />
               </button>

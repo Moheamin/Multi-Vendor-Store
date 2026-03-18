@@ -1,10 +1,11 @@
 import {
+  getAdminProducts,
+  getAdminStores,
   getDashboardStats,
-  getRevenueChartData,
+  getDetailedRevenueData,
   getGrowthMetrics,
   getRecentUsers,
-  getAdminStores,
-  getInventoryWarnings,
+  getStoresData,
   getTopStores,
 } from "@/app/_lib/data-services/dashboard-service";
 import { formatDistanceToNow } from "date-fns";
@@ -23,52 +24,51 @@ export async function getDashboardData() {
     growth,
     recentUsers,
     topStores,
-    revenueChart,
-    lowStockProducts,
+    detailedRevenue,
+    adminProducts,
     adminStores,
+    storesInfo,
   ] = await Promise.all([
     getDashboardStats(),
     getGrowthMetrics(),
     getRecentUsers(),
     getTopStores(),
-    getRevenueChartData(),
-    getInventoryWarnings(),
+    getDetailedRevenueData(),
+    getAdminProducts(),
     getAdminStores(),
+    getStoresData(),
   ]);
 
   // 2. Format Stats Cards with Real Growth
+  // Inside getDashboardData function in your data.ts
   const statsData = [
     {
       label: "إجمالي المستخدمين",
       value: stats.usersCount.toLocaleString("ar-EG"),
       icon: "Users",
       change: `${growth.userGrowth >= 0 ? "+" : ""}${growth.userGrowth}%`,
-      trend: (growth.userGrowth >= 0 ? "up" : "down") as "up" | "down",
-      color: "#00bcd4",
+      trend: growth.userGrowth >= 0 ? "up" : "down",
     },
     {
       label: "المتاجر النشطة",
       value: stats.storesCount.toLocaleString("ar-EG"),
       icon: "Store",
-      change: "+0%", // Stores grow more linearly, keep 0 or add logic
-      trend: "up" as const,
-      color: "#4caf50",
+      change: `${growth.storeGrowth >= 0 ? "+" : ""}${growth.storeGrowth}%`,
+      trend: growth.storeGrowth >= 0 ? "up" : "down",
     },
     {
       label: "المنتجات",
       value: stats.productsCount.toLocaleString("ar-EG"),
       icon: "Package",
-      change: "+0%",
-      trend: "up" as const,
-      color: "#ff9800",
+      change: `${growth.productGrowth >= 0 ? "+" : ""}${growth.productGrowth}%`,
+      trend: growth.productGrowth >= 0 ? "up" : "down",
     },
     {
-      label: "الإيرادات",
-      value: `${(stats.totalRevenue / 1000).toFixed(1)} ألف $`,
+      label: "الإيرادات المحققة",
+      value: `${stats.totalRevenue.toLocaleString("ar-IQ")} د.ع`,
       icon: "DollarSign",
       change: `${growth.revGrowth >= 0 ? "+" : ""}${growth.revGrowth}%`,
-      trend: (growth.revGrowth >= 0 ? "up" : "down") as "up" | "down",
-      color: "#e91e63",
+      trend: growth.revGrowth >= 0 ? "up" : "down",
     },
   ];
 
@@ -94,14 +94,52 @@ export async function getDashboardData() {
     }),
   }));
 
+  // Inside getDashboardData() in your data.ts file
+
+  const months = [
+    "يناير",
+    "فبراير",
+    "مارس",
+    "أبريل",
+    "مايو",
+    "يونيو",
+    "يوليو",
+    "أغسطس",
+    "سبتمبر",
+    "أكتوبر",
+    "نوفمبر",
+    "ديسمبر",
+  ];
+
+  // Map individual orders for the new granular Revenue Tab
+  const revenueData = detailedRevenue.map((item: any) => {
+    const d = new Date(item.date);
+    return {
+      id: item.id,
+      date: item.date, // Keep the full timestamp for exact chart plotting
+      month: months[d.getMonth()],
+      year: d.getFullYear(),
+      storeName: item.storeName,
+      productName: item.productName,
+      price: item.price,
+      profit: item.profit,
+      status: item.status,
+    };
+  });
+
   // 4. Format Stores Table
   const storesData = topStores.map((store: any) => ({
-    id: store.id,
+    id: store.store_id,
     name: store.store_name,
-    dealer: store.dealer_name,
-    products: store.product_count,
-    revenue: `${(store.total_revenue / 1000).toFixed(1)} ألف $`,
-    status: store.is_active ? "نشط" : "غير نشط",
+    products: store.products_count,
+    revenue: `${store.total_revenue} د.ع`,
+  }));
+
+  const StoresInfo = storesInfo.map((store: any) => ({
+    id: store.store_id,
+    name: store.store_name,
+    products: store.products_count,
+    revenue: store.total_revenue,
   }));
 
   const storeTabData = adminStores.map((store: any) => ({
@@ -124,29 +162,24 @@ export async function getDashboardData() {
   }));
 
   // 5. Format Products
-  const productsData = lowStockProducts.map((prod: any) => {
+  const productsData = adminProducts.map((prod: any) => {
     let statusLabel = "متوفر";
     if (prod.stock_quantity === 0) statusLabel = "نفذ المخزون";
-    else if (prod.stock_quantity < 5) statusLabel = "مخزون منخفض";
-
+    else if (prod.stock_quantity <= 5) statusLabel = "مخزون منخفض";
+    else statusLabel = "متوفر";
     return {
       id: prod.id,
+      store_id: prod.store_id,
       name: prod.name,
       store: prod.stores?.name,
-      category: "عام",
-      price: `${prod.price} $`,
+      category: prod.categories?.name,
+      price: prod.price,
       stock: prod.stock_quantity,
       status: statusLabel,
+      image_url: prod.image_url,
+      description: prod.description,
     };
   });
-
-  // 6. Format Revenue Chart (SQL view now provides real growth per month)
-  const revenueData = revenueChart.map((item: any) => ({
-    month: item.month_name.trim(),
-    revenue: item.revenue,
-    orders: item.orders,
-    growth: item.growth || 0, // Injected from SQL LAG()
-  }));
 
   return {
     statsData,
@@ -156,5 +189,6 @@ export async function getDashboardData() {
     revenueData,
     storeTabData,
     adminStoreData,
+    StoresInfo,
   };
 }

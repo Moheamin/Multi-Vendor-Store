@@ -1,7 +1,7 @@
 import Main from "@/app/_components/content/Main";
 
-import "./styles/globals.css";
 import Header from "./_components/content/Header";
+import "./styles/globals.css";
 
 export const metadata = {
   title: "لنك الصناعة",

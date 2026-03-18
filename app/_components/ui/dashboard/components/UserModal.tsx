@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Modal } from "./Modal";
-import { FormField, Input, Select, SubmitButton } from "./FormComponents";
 import {
-  adminUpdateUser,
   adminCreateUser,
+  adminUpdateUser,
 } from "@/app/_lib/data-services/admin-service";
+import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import { FormField, Input, Select, SubmitButton } from "./FormComponents";
+import { Modal } from "./Modal";
 
 interface UserModalProps {
   isOpen: boolean;
@@ -149,7 +149,7 @@ export function UserModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl border border-marketplace-border text-sm font-semibold hover:bg-marketplace-bg/60 transition"
+            className="px-5 py-2.5 cursor-pointer rounded-xl border border-marketplace-border text-sm font-semibold hover:bg-marketplace-bg/60 transition"
           >
             إلغاء
           </button>

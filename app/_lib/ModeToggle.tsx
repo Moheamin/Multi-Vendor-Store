@@ -1,9 +1,8 @@
 "use client";
 
-import * as React from "react";
-import { useTheme } from "next-themes";
+import { AnimatePresence, motion } from "framer-motion";
 import { Moon, Sun } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 export function ModeToggle() {

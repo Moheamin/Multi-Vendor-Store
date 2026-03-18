@@ -2,7 +2,7 @@
 
 /* 1. MAP THE THEME ENGINE */
 @theme inline {
-  /* Marketplace Colors - Mapped to your UI classes */
+  /* Marketplace Colors */
   --color-marketplace-bg: var(--marketplace-bg);
   --color-marketplace-accent: var(--marketplace-accent);
   --color-marketplace-text-primary: var(--marketplace-text-primary);
@@ -11,123 +11,115 @@
   --color-marketplace-card-hover: var(--marketplace-card-hover);
   --color-marketplace-border: var(--border);
 
+  /* Sidebar Specifics */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+
   /* System Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
-  --color-input: var(--input);
   --color-ring: var(--ring);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
 }
 
 /* 2. DEFINE THE VARIABLES */
 @layer base {
   :root {
-    /* Fixed Light Mode */
-    --background: #ffffff;
-    --foreground: #1a1a1a;
+    /* Refined Light Mode - Slate/Zinc tones for a modern feel */
+    --background: #f8fafc;
+    --foreground: #0f172a;
 
-    --marketplace-bg: #f8f9fa;
+    --marketplace-bg: #f8fafc;
     --marketplace-accent: #00bcd4;
-    --marketplace-text-primary: #1a1a1a;
+    --marketplace-text-primary: #1e293b;
     --marketplace-text-secondary: #64748b;
     --marketplace-card-bg: #ffffff;
     --marketplace-card-hover: #f1f5f9;
 
-    --card: #ffffff;
-    --card-foreground: #1a1a1a;
-    --popover: #ffffff;
-    --popover-foreground: #1a1a1a;
-    --primary: #030213;
-    --primary-foreground: #ffffff;
-    --secondary: #f1f5f9;
-    --secondary-foreground: #030213;
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
-    --accent: #f1f5f9;
-    --accent-foreground: #030213;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --border: #e2e8f0;
-    --input: #e2e8f0;
+    --border: #f1f5f9;
     --ring: #00bcd4;
-    --radius: 0.75rem;
+    --radius: 0.85rem;
+    --danger: #ef4444;
 
-    /* Sidebar Light */
+    /* Elegant Sidebar - High contrast against the f8fafc background */
     --sidebar: #ffffff;
-    --sidebar-foreground: #1a1a1a;
+    --sidebar-foreground: #334155;
     --sidebar-primary: #00bcd4;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #f1f5f9;
-    --sidebar-accent-foreground: #1a1a1a;
-    --sidebar-border: #e2e8f0;
-    --sidebar-ring: #00bcd4;
+    --sidebar-accent: #f8fafc;
+    --sidebar-border: #f1f5f9;
   }
 
   .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
+    /* Deep Charcoal for Dark Mode Depth */
+    --background: #0a0a0c;
+    --foreground: #f8fafc;
 
-    --marketplace-bg: #121212;
+    --marketplace-bg: #0f0f12;
     --marketplace-accent: #00bcd4;
-    --marketplace-text-primary: #e0e0e0;
-    --marketplace-text-secondary: #9e9e9e;
-    --marketplace-card-bg: #1e1e1e;
-    --marketplace-card-hover: #252525;
+    --marketplace-text-primary: #f1f5f9;
+    --marketplace-text-secondary: #94a3b8;
+    --marketplace-card-bg: #16161a;
+    --marketplace-card-hover: #1e1e24;
 
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
+    --border: #1e1e24;
+    --ring: #00bcd4;
+    --danger: #ef4444;
 
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
+    /* Sidebar Dark */
+    --sidebar: #111114;
+    --sidebar-foreground: #f1f5f9;
     --sidebar-primary: #00bcd4;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --sidebar-accent: #1c1c21;
+    --sidebar-border: #1c1c21;
   }
 }
 
 /* 3. APPLY BASE STYLES */
 @layer base {
+  html {
+    font-size: 90%;
+    scroll-behavior: smooth;
+  }
+
   * {
-    @apply border-border outline-ring/50 transition-colors duration-200;
+    /* Ensures borders use the elegant soft light gray by default */
+    @apply border-border transition-all duration-300;
   }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased selection:bg-marketplace-accent/20;
   }
+}
+
+/* 4. UTILITIES */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
+/* Slim scrollbar to maintain the clean aesthetic */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-marketplace-accent/10 rounded-full hover:bg-marketplace-accent/30 transition-colors;
 }

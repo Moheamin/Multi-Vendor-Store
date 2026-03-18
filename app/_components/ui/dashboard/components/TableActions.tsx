@@ -31,7 +31,7 @@ export function TableActions({ actions }: TableActionsProps) {
               action.onClick();
             }}
             title={action.label}
-            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${
+            className={`w-8 h-8 cursor-pointer rounded-xl flex items-center justify-center transition-all border ${
               action.variant === "danger"
                 ? "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20"
                 : action.variant === "success"

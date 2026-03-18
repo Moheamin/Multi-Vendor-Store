@@ -1,21 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation"; // 1. Added Next.js router
+import { signOut } from "@/app/_lib/data-services/auth-service";
+import { getProfile } from "@/app/_lib/data-services/profile-service";
+import { ModeToggle } from "@/app/_lib/ModeToggle";
+import { supabase } from "@/app/_lib/supabase/client";
+import { LogoIcon } from "../reuseable/LogoIcon";
+import Image from "next/image";
 import {
+  Clock,
+  Loader2,
+  LogIn,
+  LogOut,
   ShieldCheck,
   Store,
   User,
-  LogIn,
-  Clock,
-  LogOut,
-  Loader2,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { ModeToggle } from "@/app/_lib/ModeToggle";
-import { supabase } from "@/app/_lib/supabase/client";
-import { signOut } from "@/app/_lib/data-services/auth-service";
-import { getProfile } from "@/app/_lib/data-services/profile-service";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import Link from "next/link";
 
@@ -23,7 +25,7 @@ export default function Header() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isSigningOut, setIsSigningOut] = useState(false); // 3. Added signing out state
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const router = useRouter();
 
@@ -52,17 +54,14 @@ export default function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 4. Best Practice Handler: Try/Catch, Loading State, and Redirect
   const handleSignOut = async () => {
     try {
       setIsSigningOut(true);
-      await signOut(); // Calls your imported function
-
-      router.push("/login"); // Redirect to login
-      router.refresh(); // Clears Next.js client-side cache
+      await signOut();
+      router.push("/login");
+      router.refresh();
     } catch (error) {
       console.error("Sign out error:", error);
-      // Optional: Add a toast notification here if you use something like sonner or react-hot-toast
     } finally {
       setIsSigningOut(false);
     }
@@ -76,36 +75,23 @@ export default function Header() {
         icon: LogIn,
         type: "login",
       };
-
     const role = profile?.role || "buyer";
-
-    if (role === "admin") {
+    if (role === "admin")
       return {
         href: "/dashboard",
         label: "لوحة الإدارة",
         icon: ShieldCheck,
         type: "admin",
       };
-    }
-
-    if (role === "guest") {
+    if (role === "guest")
       return {
         href: "#",
         label: "طلبك قيد المراجعة",
         icon: Clock,
         type: "guest",
       };
-    }
-
-    if (role === "seller") {
-      return {
-        href: `/profile`,
-        label: "متجري",
-        icon: Store,
-        type: "seller",
-      };
-    }
-
+    if (role === "seller")
+      return { href: `/profile`, label: "متجري", icon: Store, type: "seller" };
     return {
       href: "/profile",
       label: "الملف الشخصي",
@@ -122,93 +108,116 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/">
           <div className="flex items-center gap-3 cursor-pointer group">
-            <div className="w-10 h-10 bg-gradient-to-br from-marketplace-accent to-[#0097a7] rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm">
-              L
+            {/* Elegant Icon Container - Centered */}
+            <div className="w-10 h-10 rounded-[10px] bg-marketplace-accent/5 border border-marketplace-accent/10 flex items-center justify-center shadow-sm backdrop-blur-sm transition-all duration-300 group-hover:bg-marketplace-accent/10 group-hover:border-marketplace-accent/30 group-hover:scale-105">
+              {/* The Icon */}
+              <LogoIcon className="w-6 h-6 text-marketplace-text-primary group-hover:text-marketplace-accent transition-colors duration-300" />
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-xl font-bold text-marketplace-text-primary group-hover:text-marketplace-accent transition-colors">
+
+            {/* Refined Typography */}
+            <div className="hidden sm:flex flex-col justify-center text-right">
+              <h1 className="text-xl font-black tracking-tight text-marketplace-text-primary transition-colors">
                 لنك الصناعة
               </h1>
-              <p className="text-[10px] text-marketplace-text-secondary">
+              <p className="text-[10px] font-bold text-marketplace-text-secondary uppercase tracking-widest mt-[-2px]">
                 سوق المتاجر
               </p>
             </div>
           </div>
         </Link>
-
         <div className="flex items-center gap-4">
-          <ModeToggle />
-          {!loading ? (
-            <div className="flex items-center gap-2">
-              {/* Admin Sign Out Button - Styled with Theme Variables */}
-              {config.type === "admin" && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSignOut}
-                  disabled={isSigningOut}
-                  className="flex items-center cursor-pointer justify-center w-10 h-10 rounded-full border border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
-                  title="تسجيل الخروج"
+          {/* MERCHANT LINK - Only for regular buyers */}
+          {!loading &&
+            user &&
+            (config.type === "buyer" || config.type === "guest") && (
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <Link
+                  href="/merchant"
+                  className="hidden md:flex items-center gap-2 px-4 py-1.5 text-sm font-bold text-marketplace-accent bg-marketplace-accent/5 border border-marketplace-accent/20 rounded-full hover:bg-marketplace-accent hover:text-white transition-all duration-300 shadow-[0_0_15px_rgba(0,188,212,0.1)]"
                 >
-                  {isSigningOut ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <LogOut size={18} />
-                  )}
-                </motion.button>
-              )}
+                  <Store size={15} />
+                  <span>بيع معنا</span>
+                </Link>
+              </motion.div>
+            )}
+          <div className="flex items-center gap-3">
+            {/* 1. Theme Toggle - Styled to match Logo Container */}
+            <div className="w-10 h-10 flex items-center justify-center rounded-[12px] bg-marketplace-card border border-marketplace-border hover:border-marketplace-accent/30 transition-all duration-300 shadow-sm backdrop-blur-md">
+              <ModeToggle />
+            </div>
 
-              {/* Main Profile/Dashboard Button */}
-              <Link href={config.href}>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  className="flex cursor-pointer items-center gap-3 px-1 pl-4 py-1 bg-secondary hover:bg-muted border border-border rounded-full transition-all group shadow-sm"
-                >
-                  {config.type === "guest" ? (
-                    <div className="flex items-center gap-2 py-1 pr-3">
-                      <div className="w-8 h-8 rounded-full bg-marketplace-accent/10 flex items-center justify-center">
-                        <Clock className="w-4 h-4 text-marketplace-accent animate-pulse" />
-                      </div>
-                      <span className="text-xs font-bold">
-                        {profile?.full_name || "تاجر جديد"}
-                      </span>
-                    </div>
-                  ) : user ? (
-                    <>
-                      <div className="w-8 h-8 rounded-full border-2 border-marketplace-accent overflow-hidden">
-                        {profile?.avatar_url ? (
-                          <img
-                            src={profile.avatar_url}
-                            className="w-full h-full object-cover"
-                            alt="avatar"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <User className="w-4 h-4" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-start">
-                        <span className="text-xs font-bold leading-none">
-                          {profile?.full_name || "مستخدم"}
-                        </span>
-                        <span className="text-[9px] text-marketplace-text-secondary leading-none mt-1">
+            {!loading ? (
+              <div className="flex items-center gap-3">
+                {/* 2. Logout Button - Refined Destructive Style */}
+                {config.type === "admin" && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    className="w-10 h-10 cursor-pointer flex items-center justify-center rounded-[12px] bg-[var(--danger)]/10 border border-[var(--danger)]/20 text-[var(--danger)] hover:bg-[var(--danger)] hover:text-white/70 disabled:opacity-50 transition-all duration-300 shadow-sm"
+                    title="تسجيل الخروج"
+                  >
+                    {isSigningOut ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <LogOut size={18} />
+                    )}
+                  </motion.button>
+                )}
+
+                {/* 3. Profile Capsule - Elegant Glassy Design */}
+                <Link href={config.href}>
+                  <motion.button
+                    whileHover={{ y: -1 }}
+                    className="flex cursor-pointer items-center gap-3 p-1 pl-4 bg-marketplace-card border border-marketplace-border rounded-full hover:border-marketplace-accent/30 hover:bg-marketplace-accent/5 transition-all duration-300 group shadow-sm backdrop-blur-md"
+                  >
+                    {user ? (
+                      <>
+                        {/* Avatar with subtle glow instead of thick border */}
+                        <div className="w-8 h-8 rounded-full border border-marketplace-accent/20 overflow-hidden shadow-[0_0_10px_rgba(20,184,166,0.1)] group-hover:border-marketplace-accent/50 transition-colors">
+                          {profile?.avatar_url ? (
+                            <img
+                              src={profile.avatar_url}
+                              className="w-full h-full object-cover"
+                              alt="avatar"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-marketplace-bg flex items-center justify-center">
+                              <User className="w-4 h-4 text-marketplace-text-secondary" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Profile Text */}
+                        <div className="flex flex-col items-start text-right">
+                          <span className="text-xs font-black text-marketplace-text-primary leading-tight">
+                            {profile?.full_name || "المستخدم"}
+                          </span>
+                          <span className="text-[9px] font-bold text-marketplace-accent uppercase tracking-wider leading-none mt-0.5 opacity-80">
+                            {config.label}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 py-1 pr-3">
+                        <config.icon className="w-4 h-4 text-marketplace-accent" />
+                        <span className="text-xs font-black">
                           {config.label}
                         </span>
                       </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2 py-1 pr-3">
-                      <config.icon className="w-4 h-4 text-marketplace-accent" />
-                      <span className="text-xs font-bold">{config.label}</span>
-                    </div>
-                  )}
-                </motion.button>
-              </Link>
-            </div>
-          ) : (
-            <div className="w-32 h-10 bg-muted animate-pulse rounded-full" />
-          )}
+                    )}
+                  </motion.button>
+                </Link>
+              </div>
+            ) : (
+              /* Skeleton Loader */
+              <div className="w-32 h-10 bg-marketplace-card border border-marketplace-border animate-pulse rounded-full" />
+            )}
+          </div>
         </div>
       </div>
     </header>

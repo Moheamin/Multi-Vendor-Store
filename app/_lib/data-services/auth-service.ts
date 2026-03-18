@@ -1,44 +1,40 @@
 // Safe for client components - only uses browser Supabase client
 import { supabase } from "../supabase/client";
 
-export async function signUp({
-  email,
-  password,
-  fullName,
-  role,
-  storeName,
-  storeDescription,
-}: any) {
-  const { data: authData, error: authError } = await supabase.auth.signUp({
+// @/app/_lib/data-services/auth-service.ts
+
+export const verifyEmail = async (email: string, token: string) => {
+  const { data, error } = await supabase.auth.verifyOtp({
     email,
-    password,
-    options: { data: { full_name: fullName, role } },
+    token,
+    type: "signup",
   });
 
-  if (authError) throw new Error(authError.message);
+  if (error) throw new Error(error.message);
+  return data;
+};
 
-  if (authData.user) {
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .insert([{ id: authData.user.id, full_name: fullName, role }]);
-    if (profileError) throw new Error(profileError.message);
+// @/app/_lib/data-services/auth-service.ts
 
-    if (role === "guest" && storeName) {
-      const { error: storeError } = await supabase.from("stores").insert([
-        {
-          owner_id: authData.user.id,
-          name: storeName,
-          slug: storeName.toLowerCase().replace(/ /g, "-"),
-          description: storeDescription,
-          is_active: false,
-        },
-      ]);
-      if (storeError) throw new Error(storeError.message);
-    }
-  }
-  return authData;
-}
+// @/app/_lib/data-services/auth-service.ts
 
+export const signUp = async ({ email, password, fullName, role }: any) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+        role: role,
+      },
+      // تأكد أن هذا الرابط هو المسار الصحيح لصفحة التأكيد في مشروعك
+      emailRedirectTo: `${window.location.origin}/login`,
+    },
+  });
+
+  if (error) throw new Error(error.message);
+  return data;
+};
 export async function signIn({ email, password }: any) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,

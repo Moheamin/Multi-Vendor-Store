@@ -79,13 +79,13 @@ export default function Main() {
             <div className="relative">
               <button
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="flex items-center justify-between gap-3 px-6 py-4 bg-marketplace-accent rounded-2xl text-white font-bold min-w-[180px] shadow-lg shadow-marketplace-accent/20 transition-transform active:scale-95"
+                className="flex items-center cursor-pointer justify-between gap-3 px-6 py-4 bg-marketplace-accent rounded-2xl text-white font-bold min-w-[180px] shadow-lg shadow-marketplace-accent/20 transition-transform active:scale-95"
               >
                 <span>
                   {FILTER_OPTIONS.find((f) => f.id === activeSort)?.label}
                 </span>
                 <ChevronDown
-                  className={`transition-transform duration-300 ${isFilterOpen ? "rotate-180" : ""}`}
+                  className={`transition-transform duration-300  ${isFilterOpen ? "rotate-180" : ""}`}
                   size={18}
                 />
               </button>
@@ -111,7 +111,7 @@ export default function Main() {
                             activeSort === option.id
                               ? "bg-marketplace-accent/10 text-marketplace-accent"
                               : "hover:bg-muted text-marketplace-text-secondary"
-                          }`}
+                          } cursor-pointer`}
                         >
                           <Icon size={18} />
                           <span className="font-bold">{option.label}</span>

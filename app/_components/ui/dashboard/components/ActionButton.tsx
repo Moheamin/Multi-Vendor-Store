@@ -11,7 +11,7 @@ export function ActionButton({ onClick, children }: ActionButtonProps) {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="px-4 py-2 rounded-lg font-semibold transition-colors 
+      className="px-4 py-2 cursor-pointer rounded-lg font-semibold transition-colors 
                  bg-marketplace-accent text-white hover:brightness-110"
     >
       {children}

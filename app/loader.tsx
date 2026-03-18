@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
 import { Store } from "lucide-react";
+import { motion } from "motion/react";
 
 interface ElegantLoaderProps {
   fullScreen?: boolean;

@@ -1,25 +1,24 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  UserPlus,
-  Mail,
-  ShieldCheck,
-  Calendar,
-  Filter,
-  Check,
-  Phone, // Added Phone icon
-} from "lucide-react";
-import { TableActions, buildUserActions } from "../components/TableActions";
-import { UserModal } from "../components/UserModal";
-import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import {
   adminDeleteUser,
   getAdminUsers,
 } from "@/app/_lib/data-services/admin-service";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Calendar,
+  Check,
+  Filter,
+  Mail,
+  Phone,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
+import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
+import { TableActions, buildUserActions } from "../components/TableActions";
+import { UserModal } from "../components/UserModal";
 
 export function UsersTab({ data: initialData }: { data: any[] }) {
   const [data, setData] = useState<any[]>(initialData);

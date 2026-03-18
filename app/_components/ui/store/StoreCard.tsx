@@ -1,8 +1,8 @@
 "use client";
 
-import { motion } from "motion/react";
 import { Badge } from "@/app/_components/shadCN-ui/badge";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { motion } from "motion/react";
 import { useState } from "react";
 
 export function StoreCard({ store }: any) {
@@ -14,7 +14,7 @@ export function StoreCard({ store }: any) {
       whileHover={{ y: -8 }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      className="relative bg-marketplace-card/40 backdrop-blur-md rounded-[2rem] overflow-hidden cursor-pointer group border border-border/50 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,184,212,0.15)] hover:border-marketplace-accent/40"
+      className="relative bg-marketplace-card/40 backdrop-blur-md shadow-sm rounded-[2rem] overflow-hidden cursor-pointer group border border-border/50 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,184,212,0.15)] hover:border-marketplace-accent/40"
     >
       {/* Featured Badge */}
       {store.isFeatured && (

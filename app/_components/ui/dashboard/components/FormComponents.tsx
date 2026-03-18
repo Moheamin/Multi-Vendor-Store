@@ -95,7 +95,7 @@ export function SubmitButton({
     <button
       type="submit"
       disabled={isLoading}
-      className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-marketplace-accent text-white rounded-2xl font-black hover:opacity-90 disabled:opacity-60 transition-all shadow-lg shadow-marketplace-accent/20 ${className}`}
+      className={`w-full flex cursor-pointer items-center justify-center gap-2 px-6 py-3.5 bg-marketplace-accent text-white rounded-2xl font-black hover:opacity-90 disabled:opacity-60 transition-all shadow-lg shadow-marketplace-accent/20 ${className}`}
     >
       {isLoading ? (
         <>

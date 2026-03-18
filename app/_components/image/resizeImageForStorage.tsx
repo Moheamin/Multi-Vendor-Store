@@ -44,17 +44,6 @@ export async function resizeImageForStorage(
           const originalSizeKB = (file.size / 1024).toFixed(2);
           const newSizeKB = (blob.size / 1024).toFixed(2);
 
-          console.log(`✅ Resize complete:`);
-          console.log(
-            `   Original: ${originalSizeKB} KB (${img.width}×${img.height}px)`,
-          );
-          console.log(
-            `   Resized: ${newSizeKB} KB (${newWidth}×${newHeight}px)`,
-          );
-          console.log(
-            `   Savings: ${(100 - (blob.size / file.size) * 100).toFixed(1)}%`,
-          );
-
           resolve(resizedFile);
         },
         "image/webp",

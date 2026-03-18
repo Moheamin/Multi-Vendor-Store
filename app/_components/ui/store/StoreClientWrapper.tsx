@@ -1,34 +1,39 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react"; // Added useMemo for performance
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  MapPin,
-  Phone,
-  Share2,
-  Info,
-  LayoutGrid,
-  ArrowRight,
-  Settings2,
-  Save,
-  Plus,
-  Check,
-  Camera,
-  Loader2,
-  X,
-  Search,
-  ShoppingBag, // Added Search and ShoppingBag icons
-} from "lucide-react";
-import Link from "next/link";
-import { InfoItem } from "@/app/_components/ui/product/InfoItem";
 import { AddProductModal } from "@/app/_components/ui/product/AddProductModal";
+import { InfoItem } from "@/app/_components/ui/product/InfoItem";
+import { ManageProductModal } from "@/app/_components/ui/product/ManageProductModal";
 import { ProductModal } from "@/app/_components/ui/product/ProductModal";
-import { updateStoreData } from "@/app/_lib/data-services/store-service";
+import { deleteProduct } from "@/app/_lib/data-services/products-service";
 import {
   getOwnerPhone,
   uploadAvatar,
 } from "@/app/_lib/data-services/profile-service";
+import { updateStoreData } from "@/app/_lib/data-services/store-service";
 import { supabase } from "@/app/_lib/supabase/client";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Camera,
+  Check,
+  Info,
+  LayoutGrid,
+  Loader2,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus,
+  Save,
+  Search,
+  Settings2,
+  Share2,
+  ShoppingBag,
+  Trash2,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "../product/ProductCard";
 
 export default function StoreClientWrapper({
@@ -37,7 +42,7 @@ export default function StoreClientWrapper({
 }: any) {
   const [store, setStore] = useState(initialStore);
   const [products, setProducts] = useState(initialProducts);
-  const [searchQuery, setSearchQuery] = useState(""); // 1. Search State
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Modal & Edit States
   const [isOwner, setIsOwner] = useState(false);
@@ -46,10 +51,18 @@ export default function StoreClientWrapper({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
+  // Owner product management
+  const [managingProduct, setManagingProduct] = useState<any>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(
+    null,
+  );
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const [dealerPhone, setDealerPhone] = useState("");
   const [copied, setCopied] = useState(false);
   const [editForm, setEditForm] = useState({ ...initialStore });
 
-  // 2. Filter Logic
+  // Filter Logic
   const filteredProducts = useMemo(() => {
     return products.filter((product: any) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -61,12 +74,19 @@ export default function StoreClientWrapper({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (user?.id === store.owner_id) {
+      if (
+        user?.id === store.owner_id ||
+        user?.user_metadata?.role === "admin"
+      ) {
         setIsOwner(true);
-        if (!store.phone) {
-          const profilePhone = await getOwnerPhone(store.owner_id);
-          setEditForm((prev: any) => ({ ...prev, phone: profilePhone }));
-        }
+      }
+      // Always fetch owner phone for WhatsApp order redirect
+      const ownerPhone = store.phone
+        ? store.phone
+        : await getOwnerPhone(store.owner_id);
+      if (ownerPhone) setDealerPhone(ownerPhone);
+      if (!store.phone && ownerPhone) {
+        setEditForm((prev: any) => ({ ...prev, phone: ownerPhone }));
       }
     }
     init();
@@ -90,6 +110,31 @@ export default function StoreClientWrapper({
     setIsEditing(false);
   };
 
+  const handleDeleteProduct = async (productId: string) => {
+    if (confirmDeleteId !== productId) {
+      setConfirmDeleteId(productId);
+      // Auto-cancel confirmation after 3s
+      setTimeout(() => setConfirmDeleteId(null), 3000);
+      return;
+    }
+    setDeletingProductId(productId);
+    try {
+      await deleteProduct(productId);
+      setProducts((prev: any[]) => prev.filter((p) => p.id !== productId));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingProductId(null);
+      setConfirmDeleteId(null);
+    }
+  };
+
+  const handleProductUpdated = (updated: any) => {
+    setProducts((prev: any[]) =>
+      prev.map((p) => (p.id === updated.id ? updated : p)),
+    );
+  };
+
   const copyUrl = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
@@ -101,7 +146,7 @@ export default function StoreClientWrapper({
       className="min-h-screen bg-marketplace-bg text-marketplace-text-primary pb-32 transition-all duration-700"
       dir="rtl"
     >
-      {/* 1. CINEMATIC HERO */}
+      {/* ── 1. CINEMATIC HERO ───────────────────────────────── */}
       <section className="relative h-[60vh] w-full flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <motion.img
@@ -109,6 +154,7 @@ export default function StoreClientWrapper({
             animate={{ scale: 1, opacity: 0.3 }}
             src={store.logo_url}
             className="w-full h-full object-cover blur-[80px] saturate-150"
+            alt=""
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-marketplace-bg/60 to-marketplace-bg" />
         </div>
@@ -173,6 +219,7 @@ export default function StoreClientWrapper({
           </AnimatePresence>
         </div>
 
+        {/* Top nav bar */}
         <div className="absolute top-0 w-full p-8 flex justify-between items-center z-50">
           <Link
             href="/"
@@ -188,7 +235,7 @@ export default function StoreClientWrapper({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   onClick={handleCancel}
-                  className="flex items-center gap-2 px-6 py-3 bg-destructive/10 text-destructive rounded-xl font-bold border border-destructive/20 hover:bg-destructive/20 transition-all"
+                  className="flex items-center gap-2 cursor-pointer px-6 py-3 bg-destructive/10 text-destructive rounded-xl font-bold border border-destructive/20 hover:bg-destructive/20 transition-all"
                 >
                   <X size={18} /> <span>إلغاء</span>
                 </motion.button>
@@ -197,7 +244,7 @@ export default function StoreClientWrapper({
             {isOwner && (
               <button
                 onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
-                className="flex items-center gap-2 px-6 py-3 bg-marketplace-accent text-primary-foreground rounded-xl font-bold shadow-xl shadow-marketplace-accent/20 hover:scale-105 transition-all"
+                className="flex items-center gap-2 cursor-pointer px-6 py-3 bg-marketplace-accent text-primary-foreground rounded-xl font-bold shadow-xl shadow-marketplace-accent/20 hover:scale-105 transition-all"
               >
                 {isSaving ? (
                   <Loader2 className="animate-spin" size={18} />
@@ -211,7 +258,7 @@ export default function StoreClientWrapper({
             )}
             <button
               onClick={copyUrl}
-              className="p-3 rounded-xl bg-marketplace-card/50 border border-marketplace-border backdrop-blur-md hover:bg-marketplace-card-hover transition-all"
+              className="p-3 cursor-pointer rounded-xl bg-marketplace-card/50 border border-marketplace-border backdrop-blur-md hover:bg-marketplace-card-hover transition-all"
             >
               {copied ? (
                 <Check size={20} className="text-marketplace-accent" />
@@ -223,7 +270,7 @@ export default function StoreClientWrapper({
         </div>
       </section>
 
-      {/* 2. INFO STRIP */}
+      {/* ── 2. INFO STRIP ───────────────────────────────────── */}
       <div className="container mx-auto px-6 -mt-16 relative z-20">
         <motion.div className="bg-marketplace-card/50 backdrop-blur-2xl border border-marketplace-border rounded-xl p-8 shadow-3xl">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
@@ -267,15 +314,15 @@ export default function StoreClientWrapper({
         </motion.div>
       </div>
 
-      {/* 3. PREMIUM COMMAND BAR (Now with Search) */}
+      {/* ── 3. COMMAND BAR ──────────────────────────────────── */}
       <div className="sticky top-6 z-40 container mx-auto px-6 mt-16">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className="bg-marketplace-card/80 backdrop-blur-2xl border border-marketplace-border rounded-2xl p-3 flex flex-col md:flex-row items-center gap-4 shadow-2xl"
         >
-          {/* Label Section */}
-          <div className="flex items-center gap-4 px-4 border-l border-marketplace-border/50 hidden md:flex">
+          {/* Label */}
+          <div className="items-center gap-4 px-4 border-l border-marketplace-border/50 hidden md:flex">
             <div className="p-3 bg-marketplace-accent/10 rounded-xl text-marketplace-accent">
               <LayoutGrid size={22} />
             </div>
@@ -289,7 +336,7 @@ export default function StoreClientWrapper({
             </div>
           </div>
 
-          {/* 3. Search Input Field */}
+          {/* Search */}
           <div className="relative flex-1 w-full group">
             <Search
               className="absolute right-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary group-focus-within:text-marketplace-accent transition-colors"
@@ -305,18 +352,18 @@ export default function StoreClientWrapper({
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary hover:text-destructive transition-colors"
+                className="absolute cursor-pointer left-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary hover:text-destructive transition-colors"
               >
                 <X size={18} />
               </button>
             )}
           </div>
 
-          {/* Owner Actions */}
+          {/* Add product (owner only) */}
           {isOwner && (
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="group relative overflow-hidden bg-marketplace-accent text-primary-foreground flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-black transition-all active:scale-95 w-full md:w-auto"
+              className="group relative cursor-pointer overflow-hidden bg-marketplace-accent text-primary-foreground flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-black transition-all active:scale-95 w-full md:w-auto"
             >
               <Plus
                 size={20}
@@ -328,7 +375,7 @@ export default function StoreClientWrapper({
         </motion.div>
       </div>
 
-      {/* 4. PRODUCT GRID */}
+      {/* ── 4. PRODUCT GRID ─────────────────────────────────── */}
       <main className="container mx-auto px-6 mt-16">
         <AnimatePresence mode="popLayout">
           {filteredProducts.length > 0 ? (
@@ -336,22 +383,97 @@ export default function StoreClientWrapper({
               layout
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
             >
-              {filteredProducts.map((product: any) => (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  key={product.id}
-                  onClick={() => setSelectedProduct(product)}
-                  className="cursor-pointer transition-transform active:scale-95"
-                >
-                  <ProductCard product={product} />
-                </motion.div>
-              ))}
+              {filteredProducts.map((product: any) => {
+                // NOTE: Change 'stock' to your actual DB column name (e.g., 'quantity')
+                const isOutOfStock = product.stock <= 0;
+
+                return (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    key={product.id}
+                    className="relative group/card"
+                  >
+                    {/* Owner action overlay (z-30 to stay clickable above out-of-stock overlay) */}
+                    {isOwner && (
+                      <div className="absolute top-3 left-3 z-30 flex gap-2 opacity-0 group-hover/card:opacity-100 transition-all duration-200">
+                        {/* Edit */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setManagingProduct(product);
+                          }}
+                          className="w-9 h-9 cursor-pointer bg-marketplace-card/90 backdrop-blur-md border border-marketplace-border rounded-xl flex items-center justify-center text-marketplace-text-secondary hover:text-marketplace-accent hover:border-marketplace-accent/50 transition-all shadow-lg"
+                          title="تعديل"
+                        >
+                          <Pencil size={15} />
+                        </button>
+
+                        {/* Delete (with confirm) */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProduct(product.id);
+                          }}
+                          disabled={deletingProductId === product.id}
+                          className={`w-9 h-9 cursor-pointer backdrop-blur-md border rounded-xl flex items-center justify-center transition-all shadow-lg ${
+                            confirmDeleteId === product.id
+                              ? "bg-destructive text-white border-destructive animate-pulse"
+                              : "bg-marketplace-card/90 border-marketplace-border text-marketplace-text-secondary hover:text-destructive hover:border-destructive/50"
+                          }`}
+                          title={
+                            confirmDeleteId === product.id
+                              ? "اضغط مرة أخرى للتأكيد"
+                              : "حذف"
+                          }
+                        >
+                          {deletingProductId === product.id ? (
+                            <Loader2 size={15} className="animate-spin" />
+                          ) : confirmDeleteId === product.id ? (
+                            <AlertTriangle size={15} />
+                          ) : (
+                            <Trash2 size={15} />
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Out of Stock Overlay */}
+                    {isOutOfStock && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-marketplace-bg/30 backdrop-blur-[2px] rounded-[2rem] pointer-events-none">
+                        <div className="bg-destructive/90 text-white px-6 py-2 rounded-xl font-bold shadow-xl flex items-center gap-2 transform -rotate-12 border border-destructive/50">
+                          <AlertTriangle size={18} />
+                          <span>نفذت الكمية</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Card itself */}
+                    <div
+                      onClick={() => {
+                        // Only open modal if it's NOT the owner AND it's NOT out of stock
+                        if (!isOwner && !isOutOfStock) {
+                          setSelectedProduct(product);
+                        }
+                      }}
+                      className={`transition-all duration-300 ${
+                        !isOwner && !isOutOfStock
+                          ? "cursor-pointer"
+                          : !isOwner && isOutOfStock
+                            ? "cursor-not-allowed opacity-60 grayscale-[50%]"
+                            : "" // Owner sees the card normally to edit it
+                      }`}
+                    >
+                      <ProductCard product={product} isOwner={isOwner} />
+                    </div>
+                  </motion.div>
+                );
+              })}
             </motion.div>
           ) : (
-            /* 4. Empty Search State */
+            /* Empty State */
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -361,33 +483,55 @@ export default function StoreClientWrapper({
                 <ShoppingBag size={48} />
               </div>
               <h3 className="text-2xl font-bold text-marketplace-text-primary mb-2">
-                لا توجد نتائج لـ "{searchQuery}"
+                {searchQuery
+                  ? `لا توجد نتائج لـ "${searchQuery}"`
+                  : "لا توجد منتجات بعد"}
               </h3>
               <p className="text-marketplace-text-secondary">
-                جرب البحث بكلمات أخرى أو تحقق من الإملاء.
+                {searchQuery
+                  ? "جرب البحث بكلمات أخرى أو تحقق من الإملاء."
+                  : isOwner
+                    ? "ابدأ بإضافة منتجك الأول!"
+                    : "تابعنا لمعرفة أحدث المنتجات."}
               </p>
-              <button
-                onClick={() => setSearchQuery("")}
-                className="mt-6 text-marketplace-accent font-bold hover:underline"
-              >
-                عرض جميع المنتجات
-              </button>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="mt-6 cursor-pointer text-marketplace-accent font-bold hover:underline"
+                >
+                  عرض جميع المنتجات
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
-      {/* 5. MODALS */}
+      {/* ── 5. MODALS ───────────────────────────────────────── */}
+
+      {/* View product (customers) */}
       <ProductModal
         product={selectedProduct}
         isOpen={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
+        dealer_phone={dealerPhone}
       />
+
+      {/* Add product (owner) */}
       <AddProductModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         storeId={store?.id}
         onProductAdded={(newP: any) => setProducts([newP, ...products])}
+      />
+
+      {/* Edit / manage product (owner) */}
+      <ManageProductModal
+        isOpen={!!managingProduct}
+        product={managingProduct}
+        storeId={store?.id}
+        onClose={() => setManagingProduct(null)}
+        onProductUpdated={handleProductUpdated}
       />
     </div>
   );

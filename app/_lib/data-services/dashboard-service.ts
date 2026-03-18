@@ -11,17 +11,28 @@ export async function getDashboardStats() {
     { count: productsCount },
     { data: revenueData },
   ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("stores").select("*", { count: "exact", head: true }),
-    supabase.from("products").select("*", { count: "exact", head: true }),
-    supabase.from("orders").select("product_price_at_click"),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("is_deleted", false),
+    supabase
+      .from("stores")
+      .select("*", { count: "exact", head: true })
+      .eq("is_deleted", false),
+    supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .eq("is_deleted", false),
+    // Only sum verified sales for global stats
+    supabase
+      .from("orders")
+      .select("product_price_at_click")
+      .eq("status", "verified_sold"),
   ]);
 
   const totalRevenue =
-    revenueData?.reduce(
-      (sum, order) => sum + (order.product_price_at_click || 0),
-      0,
-    ) || 0;
+    revenueData?.reduce((sum, o) => sum + (o.product_price_at_click || 0), 0) ||
+    0;
 
   return {
     usersCount: usersCount || 0,
@@ -36,65 +47,139 @@ export async function getGrowthMetrics() {
   const supabase = await supabaseCookiesServer();
 
   const now = new Date();
-  const lastMonth = new Date();
-  lastMonth.setMonth(now.getMonth() - 1);
+
+  const startThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const startTwoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
 
   const [
     { count: usersThisMonth },
     { count: usersLastMonth },
-    { data: revenueThisMonth },
-    { data: revenueLastMonth },
+    { count: storesThisMonth },
+    { count: storesLastMonth },
+    { count: productsThisMonth },
+    { count: productsLastMonth },
+    { data: revenueThisMonthData },
+    { data: revenueLastMonthData },
   ] = await Promise.all([
+    // Users
     supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
-      .gte("created_at", lastMonth.toISOString()),
+      .gte("created_at", startLastMonth.toISOString()),
 
     supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
-      .lt("created_at", lastMonth.toISOString()),
+      .gte("created_at", startTwoMonthsAgo.toISOString())
+      .lt("created_at", startLastMonth.toISOString()),
+
+    // Stores
+    supabase
+      .from("stores")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", startLastMonth.toISOString()),
+
+    supabase
+      .from("stores")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", startTwoMonthsAgo.toISOString())
+      .lt("created_at", startLastMonth.toISOString()),
+
+    // Products
+    supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", startLastMonth.toISOString()),
+
+    supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", startTwoMonthsAgo.toISOString())
+      .lt("created_at", startLastMonth.toISOString()),
+
+    // Revenue
+    supabase
+      .from("orders")
+      .select("product_price_at_click")
+      .gte("created_at", startLastMonth.toISOString()),
 
     supabase
       .from("orders")
       .select("product_price_at_click")
-      .gte("created_at", lastMonth.toISOString()),
-
-    supabase
-      .from("orders")
-      .select("product_price_at_click")
-      .lt("created_at", lastMonth.toISOString()),
+      .gte("created_at", startTwoMonthsAgo.toISOString())
+      .lt("created_at", startLastMonth.toISOString()),
   ]);
+  const calcGrowth = (current: number, previous: number) => {
+    if (previous === 0 && current > 0) return 100;
+    if (previous === 0 && current === 0) return 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
 
-  const revenueNow =
-    revenueThisMonth?.reduce(
+  const revNow =
+    revenueThisMonthData?.reduce(
       (s, o) => s + (o.product_price_at_click || 0),
       0,
     ) || 0;
 
-  const revenueBefore =
-    revenueLastMonth?.reduce(
+  const revBefore =
+    revenueLastMonthData?.reduce(
       (s, o) => s + (o.product_price_at_click || 0),
       0,
     ) || 0;
-
-  const userGrowth =
-    usersLastMonth && usersLastMonth > 0
-      ? ((usersThisMonth! - usersLastMonth) / usersLastMonth) * 100
-      : 0;
-
-  const revGrowth =
-    revenueBefore > 0
-      ? ((revenueNow - revenueBefore) / revenueBefore) * 100
-      : 0;
 
   return {
-    userGrowth: Math.round(userGrowth),
-    revGrowth: Math.round(revGrowth),
+    userGrowth: calcGrowth(usersThisMonth || 0, usersLastMonth || 0),
+    storeGrowth: calcGrowth(storesThisMonth || 0, storesLastMonth || 0),
+    productGrowth: calcGrowth(productsThisMonth || 0, productsLastMonth || 0),
+    revGrowth: calcGrowth(revNow, revBefore),
   };
 }
 
-// 3️⃣ Recent Users
+// app/_lib/data-services/dashboard-service.ts
+
+export async function getDetailedRevenueData() {
+  const supabase = await supabaseCookiesServer();
+
+  // Fetch individual orders with their specific product and store relations
+  const { data: orders, error } = await supabase
+    .from("orders")
+    .select(
+      `
+      id,
+      created_at,
+      product_price_at_click,
+      admin_commission_at_click,
+      status,
+      products (
+        name,
+        stores (name)
+      )
+    `,
+    )
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  return (
+    orders?.map((order) => {
+      const storeName =
+        (order.products as any)?.stores?.name || "متجر غير معروف";
+      const productName = (order.products as any)?.name || "منتج غير معروف";
+
+      return {
+        id: order.id,
+        date: order.created_at,
+        storeName,
+        productName,
+        price: order.product_price_at_click || 0,
+        profit: order.admin_commission_at_click || 0,
+        status: order.status,
+      };
+    }) || []
+  );
+}
+
 export async function getRecentUsers(limit = 5) {
   const supabase = await supabaseCookiesServer();
 
@@ -107,57 +192,6 @@ export async function getRecentUsers(limit = 5) {
   if (error) throw error;
 
   return data || [];
-}
-
-// 4️⃣ Revenue Chart
-export async function getRevenueChartData() {
-  const supabase = await supabaseCookiesServer();
-
-  const { data, error } = await supabase
-    .from("orders")
-    .select("created_at,product_price_at_click");
-
-  if (error) throw error;
-
-  const monthly: Record<string, { revenue: number; orders: number }> = {};
-
-  data?.forEach((order) => {
-    const date = new Date(order.created_at);
-    const key = `${date.getFullYear()}-${date.getMonth()}`;
-
-    if (!monthly[key]) {
-      monthly[key] = { revenue: 0, orders: 0 };
-    }
-
-    monthly[key].revenue += order.product_price_at_click || 0;
-    monthly[key].orders += 1;
-  });
-
-  const months = [
-    "يناير",
-    "فبراير",
-    "مارس",
-    "أبريل",
-    "مايو",
-    "يونيو",
-    "يوليو",
-    "أغسطس",
-    "سبتمبر",
-    "أكتوبر",
-    "نوفمبر",
-    "ديسمبر",
-  ];
-
-  return Object.entries(monthly).map(([key, val]) => {
-    const [, month] = key.split("-");
-
-    return {
-      month_name: months[Number(month)],
-      revenue: val.revenue,
-      orders: val.orders,
-      growth: 0,
-    };
-  });
 }
 
 // 5️⃣ Admin Stores
@@ -188,28 +222,40 @@ export async function getProduct(id: string) {
   return data;
 }
 
-export async function getInventoryWarnings() {
-  const supabase = await supabaseCookiesServer();
-
-  const { data } = await supabase
-    .from("products")
-    .select("*, stores(name)")
-    .lt("stock_quantity", 5)
-    .limit(5);
-  return data || [];
-}
-
 export async function getTopStores() {
   const supabase = await supabaseCookiesServer();
 
   const { data } = await supabase
-    .from("view_store_analytics")
+    .from("store_total_revenue")
     .select("*")
     .order("total_revenue", { ascending: false })
     .limit(5);
   return data || [];
 }
 
+export async function getStoresData() {
+  const supabase = await supabaseCookiesServer();
+
+  const { data } = await supabase.from("store_total_revenue").select("*");
+  return data || [];
+}
+
+export async function getProductsCount(storeid: string) {
+  const supabase = await supabaseCookiesServer();
+
+  const { count, error } = await supabase
+    .from("products")
+    .select("*", { count: "exact", head: true }) // head: true means "don't send me the data, just the count"
+    .eq("store_id", storeid)
+    .eq("is_deleted", false); // Matches your schema's soft-delete column
+
+  if (error) {
+    console.error("Error fetching product count:", error);
+    return 0; // Return 0 instead of an empty array since it's a count
+  }
+
+  return count || 0;
+}
 // ⚠️ Server-only functions below — only call from Server Components or API routes
 // These are kept here for convenience but require createServerSupabase when
 // cookie-based auth is needed. Import createServerSupabase directly in those files.
@@ -225,6 +271,18 @@ export async function getStoreBySlug(slug: string) {
     .single();
   if (error || !data) notFound();
   return data;
+}
+
+export async function getAdminProducts() {
+  const supabase = await supabaseCookiesServer();
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(`*, stores (id, name), categories (id, name)`)
+    .eq("is_deleted", false)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export async function getStorePageData(storeId: string) {

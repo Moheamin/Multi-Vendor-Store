@@ -1,29 +1,28 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  Store,
-  Plus,
-  User,
-  Package,
-  TrendingUp,
-  Filter,
-  Check,
-  BadgeCheck,
-} from "lucide-react";
-import { TableActions, buildStoreActions } from "../components/TableActions";
-import { StoreModal } from "../components/StoreModal";
-import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import {
   adminDeleteStore,
   adminToggleStoreActive,
   getAvailableOwners,
 } from "@/app/_lib/data-services/admin-service";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Check,
+  Filter,
+  Package,
+  Plus,
+  Search,
+  Store,
+  TrendingUp,
+  User,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
+import { StoreModal } from "../components/StoreModal";
+import { TableActions, buildStoreActions } from "../components/TableActions";
 // import { getAdminStores } from "@/app/_lib/data-services/dashboard-service";
 import { toast } from "react-hot-toast";
-import { supabase } from "@/app/_lib/supabase/client";
 
 export function StoresTab({
   data: initialData,
@@ -34,6 +33,7 @@ export function StoresTab({
   adminStoreData: any;
   sideData: any;
 }) {
+  const router = useRouter();
   const [data, setData] = useState<any[]>(initialData);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("الكل");
@@ -99,7 +99,8 @@ export function StoresTab({
 
   async function refreshData() {
     try {
-      setData(storeData);
+      // setData(storeData);
+      router.refresh();
     } catch (err) {
       console.error("Failed to refresh stores:", err);
     }

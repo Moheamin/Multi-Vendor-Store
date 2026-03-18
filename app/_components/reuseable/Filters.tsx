@@ -26,7 +26,7 @@ export function Filters({
 
   // Updated to use var(--border) and proper RTL gap handling
   const getButtonClass = (isActive: boolean) => `
-    flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all text-sm font-medium
+    cursor-pointer flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all text-sm font-medium
     ${
       isActive
         ? "bg-[var(--marketplace-accent)] text-white border-[var(--marketplace-accent)] shadow-md shadow-[var(--marketplace-accent)]/20"

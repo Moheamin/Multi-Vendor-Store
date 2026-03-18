@@ -3,41 +3,27 @@
 import { useState } from "react";
 import { Store } from "lucide-react";
 import Modal from "@/app/_components/reuseable/Modal";
+import Link from "next/link";
 
 export default function Footer() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState({ title: "", content: "" });
 
   const contentMap = {
-    "تصفح المتاجر": `اكتشف مجموعة واسعة من المتاجر الموثوقة في منصة واحدة. بفضل أدوات البحث والتصفية المتقدمة لدينا، يمكنك العثور على المنتجات التي تبحث عنها بسهولة وسرعة من مختلف البائعين، دون الحاجة للتنقل بين مواقع متعددة.`,
-
-    "كيف يعمل": `ببساطة، قم بإنشاء حساب مشتري للبدء. يمكنك تصفح المتاجر المتنوعة ذات التصميم الموحد، مقارنة المنتجات، والتواصل والتفاعل بأمان من خلال منصتنا المركزية التي تضمن لك تجربة تسوق موثوقة.`,
-
-    الدعم: `فريق الدعم لدينا وتحت إشراف الإدارة متواجد دائماً لضمان تجربة تسوق سلسة. سواء كان لديك استفسار حول طلبك، أو تحتاج إلى مساعدة في لوحة التحكم الخاصة بك كمشتري، نحن هنا لمساعدتك.`,
-
-    "عملية الشراء والشحن": `تعتمد منصتنا نظاماً ذكياً يربط بين الأتمتة والتواصل المباشر لضمان الشفافية:
-    
-1. طلب المنتج: عند اختيارك لمنتج، يتم إرسال رسالة تلقائية إلى WhatsApp التاجر تتضمن بياناتك وتفاصيل المنتج.
-2. تأكيد التاجر: بمجرد موافقة التاجر على الطلب، يظهر الطلب في لوحة تحكم الإدارة (Admin Dashboard) بحالة "قيد الانتظار".
-3. تواصل التاجر: يقوم التاجر بالتواصل معك مباشرة لتأكيد التفاصيل النهائية للشحن.
-4. تأكيد العميل: بعد تواصل التاجر، يطلب منك النظام تأكيد رغبتك في استلام الطلب ليتم نقله للمرحلة التالية.
-5. تحديث الحالة: يتم تحديث حالة الطلب وتعديل بياناته في لوحة التحكم بشكل مستمر حتى وصول الشحنة إليك بنجاح.`,
-
-    "كن تاجرًا": `انضم إلى منصتنا اليوم وقم بإطلاق متجرك الإلكتروني بسهولة. نوفر لك تصميم متجر موحد واحترافي، ولوحة تحكم متكاملة لإدارة منتجاتك ومبيعاتك، مما يتيح لك الوصول إلى قاعدة واسعة من المشترين دون أي تعقيدات تقنية.`,
-
-    الموارد: `نقدم لك دليلاً شاملاً وموارد تعليمية تساعدك على إدارة متجرك بفعالية. من كيفية نشر المنتجات وتنسيقها، إلى تتبع المعاملات عبر لوحة تحكم التاجر، لضمان نمو تجارتك بكل سهولة.`,
-
-    "شروط الخدمة": `تحدد شروط الخدمة القواعد واللوائح لاستخدام منصتنا كسوق متعدد البائعين. تشمل هذه الشروط حقوق ومسؤوليات كل من المشترين والتجار، وضوابط نشر المنتجات، وصلاحيات الإدارة في التحقق والإشراف لضمان بيئة آمنة وموثوقة للجميع.`,
-
-    "سياسة الخصوصية": `نحن نولي أهمية قصوى لحماية بيانات مستخدمينا. توضح سياسة الخصوصية كيفية جمع واستخدام وحماية المعلومات الشخصية للمشترين والتجار، وكيفية تأمين المعاملات والبيانات الحساسة داخل المنصة الموحدة.`,
-
-    "سياسة الكوكيز": `نستخدم ملفات تعريف الارتباط (Cookies) لتحسين تجربة المستخدم على منصتنا، مثل تذكر تفضيلات البحث والتصفية المتقدمة للمشترين، وتسهيل الوصول السريع للوحات تحكم التجار وتخصيص المحتوى.`,
+    "تصفح المتاجر": `اكتشف مجموعة واسعة من المتاجر الموثوقة...`,
+    "كيف يعمل": `ببساطة، قم بإنشاء حساب مشتري للبدء...`,
+    الدعم: `فريق الدعم لدينا وتحت إشراف الإدارة متواجد دائماً...`,
+    "عملية الشراء والشحن": `تعتمد منصتنا نظاماً ذكياً يربط بين الأتمتة والتواصل المباشر...`,
+    "كن تاجرًا": `انضم إلى منصتنا اليوم وقم بإطلاق متجرك الإلكتروني بسهولة.`,
+    الموارد: `نقدم لك دليلاً شاملاً وموارد تعليمية...`,
+    "شروط الخدمة": `تحدد شروط الخدمة القواعد واللوائح...`,
+    "سياسة الخصوصية": `نحن نولي أهمية قصوى لحماية بيانات مستخدمينا...`,
+    "سياسة الكوكيز": `نستخدم ملفات تعريف الارتباط (Cookies) لتحسين تجربة المستخدم...`,
   };
 
   const linkGroups = [
     {
       title: "للمشترين",
-      // Fixed: Removed trailing spaces and matched singular/plural names
       links: ["تصفح المتاجر", "كيف يعمل", "الدعم", "عملية الشراء والشحن"],
     },
     { title: "للتجار", links: ["كن تاجرًا", "الموارد"] },
@@ -48,13 +34,8 @@ export default function Footer() {
   ];
 
   const handleLinkClick = (linkTitle: string) => {
-    // Explicitly cast the key to ensure it checks the contentMap correctly
     const content = contentMap[linkTitle as keyof typeof contentMap];
-
-    setModalData({
-      title: linkTitle,
-      content: content || "محتوى قريباً...",
-    });
+    setModalData({ title: linkTitle, content: content || "محتوى قريباً..." });
     setIsModalOpen(true);
   };
 
@@ -65,7 +46,6 @@ export default function Footer() {
         dir="rtl"
       >
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-marketplace-accent/50 to-transparent" />
-
         <div className="max-w-7xl mx-auto px-6 py-16">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 text-right">
             <div className="md:col-span-1">
@@ -76,8 +56,7 @@ export default function Footer() {
                 </h3>
               </div>
               <p className="text-sm text-marketplace-text-secondary leading-relaxed max-w-xs">
-                سوق متعدد البائعين يربط المشترين بالتجار الموثوقين، لتجربة تسوق
-                سلسة وآمنة.
+                سوق متعدد البائعين يربط المشترين بالتجار الموثوقين.
               </p>
             </div>
 
@@ -90,25 +69,33 @@ export default function Footer() {
                 <ul className="flex flex-col gap-3 text-sm text-marketplace-text-secondary items-start">
                   {group.links.map((link) => (
                     <li key={link}>
-                      <button
-                        onClick={() => handleLinkClick(link)}
-                        className="hover:text-marketplace-accent hover:pr-2 transition-all duration-300 inline-block text-right cursor-pointer bg-transparent border-none p-0 focus:outline-none"
-                      >
-                        {link}
-                      </button>
+                      {link === "كن تاجرًا" ? (
+                        <Link
+                          href="/merchant"
+                          className="hover:text-marketplace-accent hover:pr-2 transition-all duration-300 inline-block text-marketplace-accent font-extrabold relative group"
+                        >
+                          <span className="absolute -right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-marketplace-accent rounded-full animate-pulse opacity-0 group-hover:opacity-100" />
+                          {link}
+                        </Link>
+                      ) : (
+                        <button
+                          onClick={() => handleLinkClick(link)}
+                          className="hover:text-marketplace-accent hover:pr-2 transition-all duration-300 text-right cursor-pointer bg-transparent border-none p-0 focus:outline-none"
+                        >
+                          {link}
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
           </div>
-
           <div className="mt-16 pt-8 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-marketplace-text-secondary">
             <p>© {new Date().getFullYear()} لنك الصناعة. جميع الحقوق محفوظة.</p>
           </div>
         </div>
       </footer>
-
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

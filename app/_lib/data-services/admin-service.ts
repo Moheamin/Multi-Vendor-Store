@@ -68,7 +68,7 @@ export async function getAvailableOwners() {
   const { data, error } = await supabase
     .from("profiles")
     .select("id, full_name, email")
-    .in("role", ["buyer", "seller"])
+    .in("role", ["buyer", "seller", "admin"])
     .eq("is_deleted", false);
   if (error) throw new Error(error.message);
   return data || [];
@@ -122,20 +122,70 @@ export async function updateStore(storeId: string, updates: any) {
   return data;
 }
 
-export async function uploadStoreLogo(file: File) {
-  const { supabase: client } = await import("../supabase/client");
-  const fileExt = file.name.split(".").pop();
-  const fileName = `${Math.random()}.${fileExt}`;
+/**
+ * Uploads a store logo to a folder named after the Store ID.
+ * @param storeId The UUID from the 'id' column of your 'stores' table.
+ * @param file The image file to upload.
+ */
+export async function uploadStoreLogo(storeId: string, file: File) {
+  const bucket = "stores";
 
-  const { error: uploadError } = await client.storage
-    .from("stores")
-    .upload(fileName, file);
-  if (uploadError) throw new Error(uploadError.message);
+  if (!file) {
+    console.error("No file provided to uploadStoreLogo");
+    return null;
+  }
 
-  const { data } = client.storage.from("stores").getPublicUrl(fileName);
-  return data.publicUrl;
+  try {
+    // 1. List files in the specific STORE folder (matches public.stores.id)
+    const { data: existingFiles, error: listError } = await supabase.storage
+      .from(bucket)
+      .list(storeId);
+
+    if (listError) {
+      // If this logs a 403, your 'Store Owners Manage via Table' policy is failing
+      console.error("Supabase List Error:", listError);
+    }
+
+    // 2. Clear out the old store images
+    if (existingFiles && existingFiles.length > 0) {
+      const filesToRemove = existingFiles
+        .filter((x) => x.name !== ".emptyFolderPlaceholder")
+        .map((x) => `${storeId}/${x.name}`);
+
+      if (filesToRemove.length > 0) {
+        const { error: removeError } = await supabase.storage
+          .from(bucket)
+          .remove(filesToRemove);
+
+        if (removeError) {
+          console.error("Supabase Remove Error:", removeError);
+        }
+      }
+    }
+
+    // 3. Prepare the new path: stores/[STORE_ID]/[TIMESTAMP].[EXT]
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `${storeId}/${fileName}`;
+
+    // 4. Perform the upload
+    const { error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (uploadError) throw uploadError;
+
+    // 5. Generate and return the Public URL with a timestamp to bust cache
+    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+    return `${data.publicUrl}?t=${Date.now()}`;
+  } catch (error) {
+    console.error("Store logo upload error:", error);
+    throw error;
+  }
 }
-
 export async function adminUpsertStore(
   storeId: string | undefined,
   storeData: any,
@@ -160,38 +210,38 @@ export async function adminUpsertStore(
   }
 }
 
-export async function getPendingRequests() {
+// ─── MERCHANT INQUIRIES ─────────────────────────────────────
+// @/app/_lib/data-services/admin-service.ts
+
+export async function getMerchantInquiries() {
   const { data, error } = await supabase
-    .from("stores")
-    .select(`*, profiles:seller_id (id, full_name, email, phone)`)
-    .eq("status", "pending")
+    .from("merchant_inquiries")
+    .select("*")
+    .in("status", ["new", "contacted"])
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data;
 }
 
-export async function handleRequestDecision(
-  storeId: string,
-  ownerId: string,
-  decision: "approve" | "reject",
+export async function updateInquiryStatus(
+  id: string,
+  status: "contacted" | "accepted" | "rejected",
 ) {
-  if (decision === "approve") {
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ role: "seller" })
-      .eq("id", ownerId);
-    const { error: storeError } = await supabase
-      .from("stores")
-      .update({ is_active: true, status: "approved" })
-      .eq("id", storeId);
-    if (profileError || storeError) throw new Error("فشل التحديث");
-  } else {
-    const { error } = await supabase
-      .from("stores")
-      .update({ is_deleted: true, status: "rejected" })
-      .eq("id", storeId);
-    if (error) throw new Error("فشل الحذف");
-  }
+  const { error } = await supabase
+    .from("merchant_inquiries")
+    .update({ status })
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+}
+
+// Service for the public form
+export async function submitMerchantInquiry(formData: any) {
+  const { error } = await supabase
+    .from("merchant_inquiries")
+    .insert([formData]);
+
+  if (error) throw new Error(error.message);
 }
 
 // ─── PRODUCTS ─────────────────────────────────────────────────
@@ -207,29 +257,58 @@ export async function getAdminProducts() {
 }
 
 export async function adminUpsertProduct(
-  productId: string | undefined,
+  productId: string | null | undefined,
   productData: any,
 ) {
+  // 1. التحقق من وجود المعرفات الأساسية لمنع خطأ الـ null في قاعدة البيانات
+  if (!productData.store_id) {
+    throw new Error("يجب اختيار متجر صالح لهذا المنتج");
+  }
+
+  const payload = {
+    name: productData.name,
+    price: Number(productData.price),
+    description: productData.description || null,
+    stock_quantity: Number(productData.stock_quantity) || 0,
+    // إزالة Number() لأن store_id عادة ما يكون UUID (string)
+    store_id: productData.store_id,
+    category_id: productData.category_id
+      ? Number(productData.category_id)
+      : null,
+    image_url: productData.image_url || null,
+    updated_at: new Date().toISOString(), // تحديث وقت التعديل
+    is_deleted: false, // تأكد من أن المنتج غير محذوف
+  };
+
   if (productId) {
+    // عملية التحديث (Update)
     const { data, error } = await supabase
       .from("products")
-      .update(productData)
+      .update(payload)
       .eq("id", productId)
       .select()
       .single();
-    if (error) throw new Error(error.message);
+
+    if (error) {
+      console.error("Update product error:", error);
+      throw new Error(error.message || "فشل تحديث المنتج");
+    }
     return data;
   } else {
+    // عملية الإضافة (Insert) في حال لم يكن هناك productId
     const { data, error } = await supabase
       .from("products")
-      .insert([productData])
+      .insert([payload])
       .select()
       .single();
-    if (error) throw new Error(error.message);
+
+    if (error) {
+      console.error("Insert product error:", error);
+      throw new Error(error.message || "فشل إضافة المنتج الجديد");
+    }
     return data;
   }
 }
-
 export async function adminDeleteProduct(productId: string) {
   const { error } = await supabase
     .from("products")

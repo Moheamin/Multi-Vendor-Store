@@ -1,20 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react"; // Added hooks for hydration fix
-import { useTheme } from "next-themes";
 import {
   ArrowLeft,
-  Sun,
+  ClipboardList,
+  DollarSign,
   Moon,
+  Package,
   Shield,
+  Store,
+  Sun,
   TrendingUp,
   Users,
-  Store,
-  Package,
-  DollarSign,
   X,
-  ClipboardList,
 } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import type { TabType } from "../types";
 
 interface SidebarProps {
@@ -42,85 +42,112 @@ export function Sidebar({
   setIsOpen,
 }: SidebarProps) {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false); // [1] Initialize mounted state
+  const [mounted, setMounted] = useState(false);
 
-  // [2] Set mounted to true once the component reaches the client
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  const handleTabClick = (id: TabType) => {
+    // 1. Change the actual view state
+    onTabChange(id);
+
+    // 3. Close sidebar on mobile after clicking
+    if (window.innerWidth < 768) {
+      setIsOpen(false);
+    }
+  };
+
   return (
-    <aside
-      className={`fixed right-0 top-0 h-full w-64 border-l z-50 transition-transform duration-300 p-6 
-        bg-sidebar border-sidebar-border
-        ${isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"}`}
-    >
-      <div className="flex items-center justify-between mb-8">
-        <button
-          onClick={onBack}
-          className="flex cursor-pointer items-center gap-2 transition-colors text-sidebar-foreground hover:text-marketplace-accent"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm">العودة للسوق</span>
-        </button>
+    <>
+      {/* MOBILE OVERLAY: This blurs the background so the white sidebar looks high-end */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
 
-        <div className="flex gap-2">
+      <aside
+        className={`fixed right-0 top-0 h-full w-72 border-l z-50 transition-all duration-300 ease-in-out p-6 
+          bg-sidebar/95 backdrop-blur-md border-sidebar-border shadow-2xl
+          ${isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"}`}
+      >
+        <div className="flex items-center justify-between mb-10">
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 cursor-pointer rounded-lg bg-sidebar-accent text-sidebar-primary hover:scale-103"
+            onClick={onBack}
+            className="flex cursor-pointer items-center gap-2 transition-colors text-sidebar-foreground/60 hover:text-marketplace-accent group"
           >
-            {/* [3] Fix: Only render icons if mounted is true */}
-            {!mounted ? (
-              <div className="w-4 h-4" /> // Empty placeholder with same dimensions
-            ) : theme === "dark" ? (
-              <Sun className="w-4 h-4" />
-            ) : (
-              <Moon className="w-4 h-4" />
-            )}
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            <span className="text-xs font-bold">العودة للسوق</span>
           </button>
 
-          <button
-            onClick={() => setIsOpen(false)}
-            className="md:hidden p-2 text-sidebar-foreground"
-          >
-            <X size={20} />
-          </button>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 mb-8 p-3 rounded-xl border bg-gradient-to-l from-marketplace-accent/10 to-transparent border-marketplace-accent/20">
-        <Shield className="w-6 h-6 text-marketplace-accent" />
-        <div>
-          <div className="font-bold text-sm text-sidebar-foreground">
-            لوحة الإدارة
-          </div>
-          <div className="text-[10px] text-marketplace-text-secondary">
-            مالك المنصة
-          </div>
-        </div>
-      </div>
-
-      <nav className="space-y-2">
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-
-          return (
+          <div className="flex gap-2">
             <button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
-              className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
-                isActive
-                  ? "bg-marketplace-accent text-white shadow-lg shadow-marketplace-accent/20 scale-[1.02]"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
-              }`}
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 cursor-pointer rounded-xl bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent/80 transition-all active:scale-95"
             >
-              <Icon className="w-5 h-5" />
-              {item.label}
+              {!mounted ? (
+                <div className="w-4 h-4" />
+              ) : theme === "dark" ? (
+                <Sun size={18} />
+              ) : (
+                <Moon size={18} />
+              )}
             </button>
-          );
-        })}
-      </nav>
-    </aside>
+
+            <button
+              onClick={() => setIsOpen(false)}
+              className="md:hidden p-2 cursor-pointer text-sidebar-foreground/40 hover:text-destructive transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* ADMIN BADGE: Cleaned up for White Mode */}
+        <div className="flex items-center gap-3 mb-10 p-4 rounded-2xl border border-marketplace-accent/10 bg-gradient-to-l from-marketplace-accent/[0.05] to-transparent">
+          <div className="bg-marketplace-accent/10 p-2 rounded-lg">
+            <Shield className="w-5 h-5 text-marketplace-accent" />
+          </div>
+          <div>
+            <div className="font-bold text-sm text-sidebar-foreground tracking-tight">
+              لوحة الإدارة
+            </div>
+            <div className="text-[10px] text-marketplace-accent font-medium uppercase tracking-wider">
+              مالك المنصة
+            </div>
+          </div>
+        </div>
+
+        <nav className="space-y-1.5">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleTabClick(item.id)}
+                className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-bold text-sm group relative
+                  ${
+                    isActive
+                      ? "bg-marketplace-accent text-white shadow-lg shadow-marketplace-accent/25 scale-[1.02]"
+                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  }`}
+              >
+                <Icon
+                  className={`w-5 h-5 transition-transform ${isActive ? "scale-110" : "group-hover:scale-110"}`}
+                />
+                {item.label}
+                {isActive && (
+                  <div className="absolute left-2 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }

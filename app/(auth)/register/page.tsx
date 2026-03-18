@@ -3,37 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  User,
-  Mail,
-  Lock,
-  Loader2,
-  CheckCircle2,
-  Store,
-  Users,
-  FileText,
-} from "lucide-react";
+import { User, Mail, Lock, Loader2, CheckCircle2 } from "lucide-react";
 import { signUp } from "@/app/_lib/data-services/auth-service";
 
 export default function RegisterPage() {
   const router = useRouter();
 
-  // 1. Updated State Management
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
-    role: "buyer", // default role
-    storeName: "",
-    storeDescription: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // 2. Handle Form Submission
-  // Inside RegisterPage.tsx
+  // RegisterPage.tsx (الجزء الخاص بـ handleSubmit)
+
+  // داخل RegisterPage.tsx
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,24 +29,22 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      // Logic: If they chose "seller" (Dealer), we send them as "guest"
-      // If they chose "buyer", they stay "buyer"
-      const finalRole = formData.role === "seller" ? "guest" : "buyer";
-
-      await signUp({
+      const data = await signUp({
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
-        role: finalRole, // This maps to your DB roles
-        storeName: formData.role === "seller" ? formData.storeName : null,
-        storeDescription:
-          formData.role === "seller" ? formData.storeDescription : null,
+        role: "buyer",
       });
 
-      setIsSuccess(true);
-      setTimeout(() => router.push("/login"), 5000);
+      // إذا تم إنشاء الحساب بنجاح وينتظر التأكيد (Session ستكون null)
+      if (data.user) {
+        // التوجيه لصفحة التأكيد مع تمرير الإيميل كـ Query Parameter
+        router.push(
+          `/confirm-email?email=${encodeURIComponent(formData.email)}`,
+        );
+      }
     } catch (err: any) {
-      setError(err.message || "حدث خطأ أثناء إنشاء الحساب");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -75,14 +61,10 @@ export default function RegisterPage() {
           <CheckCircle2 className="w-10 h-10 text-green-500" />
         </div>
         <h2 className="text-2xl font-bold text-marketplace-text-primary mb-2">
-          {formData.role === "seller"
-            ? "تم استلام طلب الانضمام!"
-            : "تم إنشاء الحساب!"}
+          تم إنشاء الحساب بنجاح!
         </h2>
         <p className="text-marketplace-text-secondary mb-6 leading-relaxed">
-          {formData.role === "seller"
-            ? "لقد تم إرسال طلبك للإدارة. يمكنك تصفح الموقع حالياً، وسنقوم بتفعيل متجرك فور مراجعة البيانات."
-            : "يرجى التحقق من بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول."}
+          يرجى التحقق من بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.
         </p>
         <Link
           href="/login"
@@ -104,34 +86,8 @@ export default function RegisterPage() {
           إنشاء حساب جديد
         </h1>
         <p className="text-marketplace-text-secondary mt-2">
-          انضم إلى مجتمعنا المتنامي
+          انضم إلى مجتمعنا المتنامي كمشتري
         </p>
-      </div>
-
-      {/* Role Selector Toggle */}
-      <div className="flex bg-marketplace-bg p-1 rounded-2xl mb-8 border border-border">
-        <button
-          type="button"
-          onClick={() => setFormData({ ...formData, role: "buyer" })}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
-            formData.role === "buyer"
-              ? "bg-marketplace-card text-marketplace-accent shadow-sm"
-              : "text-marketplace-text-secondary hover:text-marketplace-text-primary"
-          }`}
-        >
-          <Users size={18} /> مشتري
-        </button>
-        <button
-          type="button"
-          onClick={() => setFormData({ ...formData, role: "seller" })}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
-            formData.role === "seller"
-              ? "bg-marketplace-card text-marketplace-accent shadow-sm"
-              : "text-marketplace-text-secondary hover:text-marketplace-text-primary"
-          }`}
-        >
-          <Store size={18} /> تاجر
-        </button>
       </div>
 
       {error && (
@@ -141,7 +97,6 @@ export default function RegisterPage() {
       )}
 
       <form className="space-y-4" onSubmit={handleSubmit}>
-        {/* Standard Fields */}
         <div>
           <label className="block text-sm font-medium text-marketplace-text-secondary mb-2 mr-1">
             الاسم الكامل
@@ -180,52 +135,6 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Conditional Dealer Fields */}
-        {formData.role === "seller" && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="h-[1px] bg-border my-2" />
-            <div>
-              <label className="block text-sm font-medium text-marketplace-text-secondary mb-2 mr-1">
-                اسم المتجر
-              </label>
-              <div className="relative">
-                <Store className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  required
-                  value={formData.storeName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, storeName: e.target.value })
-                  }
-                  className="w-full bg-marketplace-bg border border-border rounded-xl py-3 pr-11 pl-4 outline-none focus:ring-2 focus:ring-marketplace-accent/50 transition-all text-marketplace-text-primary border-marketplace-accent/30"
-                  placeholder="ما هو اسم متجرك؟"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-marketplace-text-secondary mb-2 mr-1">
-                وصف المتجر
-              </label>
-              <div className="relative">
-                <FileText className="absolute right-3 top-4 w-5 h-5 text-muted-foreground" />
-                <textarea
-                  required
-                  rows={3}
-                  value={formData.storeDescription}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      storeDescription: e.target.value,
-                    })
-                  }
-                  className="w-full bg-marketplace-bg border border-border rounded-xl py-3 pr-11 pl-4 outline-none focus:ring-2 focus:ring-marketplace-accent/50 transition-all text-marketplace-text-primary resize-none"
-                  placeholder="تحدث قليلاً عن المنتجات التي ستبيعها..."
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
         <div>
           <label className="block text-sm font-medium text-marketplace-text-secondary mb-2 mr-1">
             كلمة المرور
@@ -249,14 +158,12 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-marketplace-accent to-[#0097a7] text-white font-bold py-3 rounded-xl shadow-lg shadow-marketplace-accent/20 hover:opacity-90 transition-opacity mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+          className="w-full flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-marketplace-accent to-[#0097a7] text-white font-bold py-3 rounded-xl shadow-lg shadow-marketplace-accent/20 hover:opacity-90 transition-opacity mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {loading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" /> جاري المعالجة...
             </>
-          ) : formData.role === "seller" ? (
-            "إرسال طلب الانضمام"
           ) : (
             "إنشاء الحساب"
           )}

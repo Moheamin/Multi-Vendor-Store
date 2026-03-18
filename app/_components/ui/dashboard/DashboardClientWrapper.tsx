@@ -1,18 +1,18 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Sidebar } from "@/app/_components/ui/dashboard/components/SideBar";
 import { DashboardHeader } from "@/app/_components/ui/dashboard/components/DashboardHeader";
+import { Sidebar } from "@/app/_components/ui/dashboard/components/SideBar";
 import { OverviewTab } from "@/app/_components/ui/dashboard/tabs/OverviewTab";
-import { UsersTab } from "@/app/_components/ui/dashboard/tabs/UserTab";
-import { StoresTab } from "@/app/_components/ui/dashboard/tabs/StoreTab";
 import { ProductsTab } from "@/app/_components/ui/dashboard/tabs/ProductTab";
-import { RevenueTab } from "@/app/_components/ui/dashboard/tabs/RevenueTab";
 import { RequestsTab } from "@/app/_components/ui/dashboard/tabs/RequestsTab"; // New Tab Component
-import { Menu } from "lucide-react";
+import { RevenueTab } from "@/app/_components/ui/dashboard/tabs/RevenueTab";
+import { StoresTab } from "@/app/_components/ui/dashboard/tabs/StoreTab";
+import { UsersTab } from "@/app/_components/ui/dashboard/tabs/UserTab";
 import type { TabType } from "@/app/_components/ui/dashboard/types";
+import { AnimatePresence, motion } from "framer-motion";
+import { Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function DashboardClientWrapper({
   initialData,
@@ -27,7 +27,6 @@ export default function DashboardClientWrapper({
   useEffect(() => {}, [initialData]);
 
   const handleBack = () => router.push("/");
-  console.log(initialData.storesData);
 
   return (
     <div className="min-h-screen bg-marketplace-bg selection:bg-marketplace-accent/30 overflow-x-hidden">
@@ -35,7 +34,7 @@ export default function DashboardClientWrapper({
       <div className="md:hidden fixed top-4 right-4 z-[60]">
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="p-3 rounded-2xl bg-marketplace-card border border-marketplace-border shadow-lg text-marketplace-accent"
+          className="p-3 cursor-pointer rounded-2xl bg-marketplace-card border border-marketplace-border shadow-lg text-marketplace-accent"
         >
           <Menu size={24} />
         </button>
@@ -98,19 +97,15 @@ export default function DashboardClientWrapper({
                 <StoresTab
                   data={initialData.storeTabData}
                   adminStoreData={initialData.adminStoreData}
-                  sideData={initialData.storesData}
+                  sideData={initialData.StoresInfo}
                 />
               )}
               {activeTab === "products" && (
                 <ProductsTab data={initialData.productsData} />
               )}
-              {/* New Requests Tab Component */}
               {activeTab === "requests" && <RequestsTab />}
               {activeTab === "revenue" && (
-                <RevenueTab
-                  revenueData={initialData.revenueData}
-                  statsData={initialData.statsData}
-                />
+                <RevenueTab revenueData={initialData.revenueData} />
               )}
             </motion.div>
           </AnimatePresence>

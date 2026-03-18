@@ -1,14 +1,28 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import { X, Upload, Loader2, DollarSign, Edit3 } from "lucide-react";
+import { loadHeic2any } from "@/app/_components/image/loadHeic2any";
+import { resizeImageForStorage } from "@/app/_components/image/resizeImageForStorage";
+import { getCategoriesForSelect } from "@/app/_lib/data-services/admin-service";
 import {
   createProduct,
   uploadProductImage,
-} from "@/app/_lib/data-services/product-service";
-import { loadHeic2any } from "@/app/_components/image/loadHeic2any";
-import { resizeImageForStorage } from "@/app/_components/image/resizeImageForStorage";
+} from "@/app/_lib/data-services/products-service";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlignLeft,
+  Camera,
+  ChevronDown,
+  DollarSign,
+  Hash,
+  Loader2,
+  Package,
+  Tag,
+  Upload,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "react-hot-toast";
+
 type AddProductModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -22,37 +36,63 @@ export function AddProductModal({
   storeId,
   onProductAdded,
 }: AddProductModalProps) {
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [formData, setFormData] = useState({
+  const [form, setForm] = useState({
     name: "",
     price: "",
     description: "",
+    stock_quantity: "",
+    category_id: "",
   });
 
+  // Load categories & reset form when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    async function init() {
+      try {
+        const categoriesData = await getCategoriesForSelect();
+        setCategories(categoriesData);
+      } catch {
+        toast.error("فشل تحميل الفئات");
+      }
+    }
+    init();
+    // Reset every open
+    setForm({
+      name: "",
+      price: "",
+      description: "",
+      stock_quantity: "",
+      category_id: "",
+    });
+    setPreviewUrl("");
+    setImageFile(null);
+  }, [isOpen]);
+
+  // Escape key to close
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  if (!isOpen) return null;
-
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    let file = e.target.files?.[0];
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    setLoading(true);
+    setIsLoading(true);
+    const toastId = toast.loading("جاري معالجة الصورة...");
     try {
       let processedFile = file;
 
-      // 1. Handle HEIC if necessary
+      // 1. Handle HEIC (iPhone)
       if (
         file.type === "image/heic" ||
         file.name.toLowerCase().endsWith(".heic")
@@ -69,153 +109,293 @@ export function AddProductModal({
         );
       }
 
-      // 2. Resize and Convert to WebP (This replaces 'normalizeImage')
+      // 2. Resize & convert to WebP
       const finalFile = await resizeImageForStorage(processedFile, 2000);
-
-      // 3. Update State
       setImageFile(finalFile);
-      setPreview(URL.createObjectURL(finalFile));
-    } catch (error) {
-      console.error("Image processing failed:", error);
-      alert("حدث خطأ أثناء معالجة الصورة");
+      setPreviewUrl(URL.createObjectURL(finalFile));
+      toast.success("تمت المعالجة بنجاح", { id: toastId });
+    } catch {
+      toast.error("فشل في معالجة الصورة", { id: toastId });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storeId) return;
+    if (!form.name || !form.price) {
+      toast.error("يرجى ملء الحقول المطلوبة");
+      return;
+    }
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       let imageUrl: string | null = null;
-
       if (imageFile) {
-        imageUrl = await uploadProductImage(imageFile);
+        imageUrl = await uploadProductImage(storeId, imageFile);
       }
 
       const newProduct = await createProduct({
-        name: formData.name,
-        price: parseFloat(formData.price) || 0,
-        description: formData.description,
+        name: form.name,
+        price: parseFloat(form.price) || 0,
+        description: form.description,
+        stock_quantity: Number(form.stock_quantity) || 0,
+        category_id: form.category_id ? Number(form.category_id) : null,
         store_id: storeId,
-        image_url: imageUrl || undefined, // ✅ use image_url (not image)
+        image_url: imageUrl || undefined,
       });
 
+      toast.success("تمت إضافة المنتج بنجاح");
       onProductAdded(newProduct);
       onClose();
     } catch (err: any) {
-      alert(`خطأ: ${err.message}`);
+      toast.error(err.message || "حدث خطأ أثناء الحفظ");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/60 backdrop-blur-md"
-      onClick={onClose}
-      dir="rtl"
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-marketplace-card w-full max-w-lg rounded-xl border border-marketplace-border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-center p-8 border-b border-marketplace-border/10">
-          <h2 className="text-2xl font-bold text-marketplace-text-primary">
-            إضافة منتج جديد
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 cursor-pointer text-marketplace-text-secondary hover:text-marketplace-text-primary hover:bg-marketplace-card-hover rounded-full transition-all"
-            type="button"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        />
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto">
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="relative group h-52 w-full rounded-xl border-2 border-dashed border-marketplace-border bg-marketplace-bg/50 flex flex-col items-center justify-center cursor-pointer hover:border-marketplace-accent transition-all overflow-hidden"
-          >
-            {preview ? (
-              <img
-                src={preview}
-                className="w-full h-full object-cover"
-                alt="Preview"
-              />
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <Upload className="text-marketplace-accent" size={32} />
-                <span className="text-sm text-marketplace-text-secondary font-medium">
-                  رفع صورة المنتج
-                </span>
+        {/* Modal */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative w-full max-w-2xl bg-marketplace-card border border-marketplace-border rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
+          dir="rtl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* ── Header ── */}
+          <div className="px-8 py-6 border-b border-marketplace-border flex items-center justify-between bg-gradient-to-l from-marketplace-accent/5 to-transparent">
+            <h2 className="text-xl font-black text-marketplace-text-primary flex items-center gap-3">
+              <div className="p-2 bg-marketplace-accent/20 rounded-xl text-marketplace-accent">
+                <Package size={20} />
               </div>
-            )}
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageChange}
-              className="hidden"
-              accept="image/*"
-            />
+              إضافة منتج جديد
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 cursor-pointer hover:bg-marketplace-card-hover rounded-full text-marketplace-text-secondary transition-colors"
+            >
+              <X size={20} />
+            </button>
           </div>
 
-          <div className="space-y-4">
-            <div className="relative">
-              <Edit3
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary"
-                size={18}
-              />
-              <input
-                required
-                placeholder="اسم المنتج"
-                className="w-full bg-marketplace-bg/50 pr-12 pl-4 py-4 rounded-xl border border-marketplace-border outline-none focus:border-marketplace-accent transition-all text-marketplace-text-primary placeholder:text-marketplace-text-secondary"
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </div>
+          {/* ── Form Body ── */}
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar max-h-[70vh]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Image Upload */}
+              <div className="md:col-span-2 space-y-3">
+                <label className="text-[11px] font-bold text-marketplace-text-secondary uppercase tracking-widest px-1">
+                  صورة المنتج
+                </label>
+                <div
+                  onClick={() => !isLoading && fileInputRef.current?.click()}
+                  className={`relative h-56 w-full border-2 border-dashed border-marketplace-border rounded-[2.5rem] overflow-hidden group bg-marketplace-bg hover:border-marketplace-accent/40 transition-all cursor-pointer flex items-center justify-center ${
+                    isLoading ? "opacity-50 cursor-wait" : ""
+                  }`}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*,image/heic"
+                    onChange={handleFileChange}
+                  />
+                  {previewUrl ? (
+                    <>
+                      <img
+                        src={previewUrl}
+                        alt="Product preview"
+                        className="absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-1000 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
+                        <Camera className="text-marketplace-accent" size={28} />
+                        <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
+                          تغيير الصورة
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-marketplace-card rounded-full border border-marketplace-border text-marketplace-text-secondary group-hover:text-marketplace-accent transition-colors">
+                        <Upload size={24} />
+                      </div>
+                      <span className="text-xs font-bold text-marketplace-text-secondary">
+                        اضغط لرفع صورة المنتج (يدعم صور الآيفون)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-            <div className="relative">
-              <DollarSign
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary"
-                size={18}
-              />
-              <input
-                required
-                type="number"
-                placeholder="السعر"
-                className="w-full bg-marketplace-bg/50 pr-12 pl-4 py-4 rounded-xl border border-marketplace-border outline-none focus:border-marketplace-accent transition-all text-marketplace-text-primary placeholder:text-marketplace-text-secondary"
-                onChange={(e) =>
-                  setFormData({ ...formData, price: e.target.value })
-                }
-              />
-            </div>
+              {/* Name */}
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[11px] font-bold text-marketplace-text-secondary uppercase">
+                  اسم المنتج
+                </label>
+                <div className="relative group">
+                  <Tag
+                    size={18}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary/50 group-focus-within:text-marketplace-accent transition-colors"
+                  />
+                  <input
+                    type="text"
+                    placeholder="مثال: آيفون 15 برو"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full bg-marketplace-bg border border-marketplace-border rounded-2xl py-3.5 pr-11 pl-4 text-marketplace-text-primary font-bold focus:border-marketplace-accent/50 outline-none transition-all"
+                  />
+                </div>
+              </div>
 
-            <textarea
-              placeholder="وصف المنتج..."
-              className="w-full bg-marketplace-bg/50 p-6 rounded-xl border border-marketplace-border outline-none focus:border-marketplace-accent h-32 resize-none transition-all text-marketplace-text-primary placeholder:text-marketplace-text-secondary"
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-            />
+              {/* Price */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-marketplace-text-secondary uppercase">
+                  السعر (د.إ)
+                </label>
+                <div className="relative group">
+                  <DollarSign
+                    size={18}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary/50 group-focus-within:text-marketplace-accent transition-colors"
+                  />
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={form.price}
+                    onChange={(e) =>
+                      setForm({ ...form, price: e.target.value })
+                    }
+                    className="w-full bg-marketplace-bg border border-marketplace-border rounded-2xl py-3.5 pr-11 pl-4 text-marketplace-text-primary font-black outline-none focus:border-marketplace-accent/50 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Stock */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-marketplace-text-secondary uppercase">
+                  الكمية المتوفرة
+                </label>
+                <div className="relative group">
+                  <Hash
+                    size={18}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary/50 group-focus-within:text-marketplace-accent transition-colors"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={form.stock_quantity}
+                    onChange={(e) =>
+                      setForm({ ...form, stock_quantity: e.target.value })
+                    }
+                    className="w-full bg-marketplace-bg border border-marketplace-border rounded-2xl py-3.5 pr-11 pl-4 text-marketplace-text-primary font-bold outline-none focus:border-marketplace-accent/50 transition-all"
+                  />
+                </div>
+                {/* Live stock status hint */}
+                {form.stock_quantity !== "" && (
+                  <p
+                    className={`text-[11px] font-bold px-1 ${
+                      Number(form.stock_quantity) === 0
+                        ? "text-destructive"
+                        : Number(form.stock_quantity) <= 5
+                          ? "text-amber-400"
+                          : "text-marketplace-text-secondary"
+                    }`}
+                  >
+                    {Number(form.stock_quantity) === 0
+                      ? "⚠ سيظهر المنتج كـ «نفدت الكمية»"
+                      : Number(form.stock_quantity) <= 5
+                        ? "⚡ سيظهر تحذير «كمية محدودة»"
+                        : "✓ الكمية كافية"}
+                  </p>
+                )}
+              </div>
+
+              {/* Category */}
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[11px] font-bold text-marketplace-text-secondary uppercase">
+                  الفئة
+                </label>
+                <div className="relative group">
+                  <AlignLeft
+                    size={18}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary/50 group-focus-within:text-marketplace-accent transition-colors"
+                  />
+                  <select
+                    value={form.category_id}
+                    onChange={(e) =>
+                      setForm({ ...form, category_id: e.target.value })
+                    }
+                    className="w-full bg-marketplace-bg border border-marketplace-border focus:border-marketplace-accent/50 rounded-2xl py-3.5 pr-11 pl-10 outline-none text-marketplace-text-primary font-bold transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="">بدون فئة</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary/50 pointer-events-none"
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[11px] font-bold text-marketplace-text-secondary uppercase">
+                  وصف المنتج
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="اكتب تفاصيل المنتج هنا..."
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  className="w-full bg-marketplace-bg border border-marketplace-border rounded-[1.5rem] py-4 px-5 text-marketplace-text-primary font-medium outline-none resize-none focus:border-marketplace-accent/50 transition-all"
+                />
+              </div>
+            </div>
           </div>
 
-          <button
-            disabled={loading}
-            className="w-full bg-marketplace-accent text-primary-foreground py-5 rounded-xl font-black hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            type="submit"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : "نشر المنتج"}
-          </button>
-        </form>
-      </motion.div>
-    </div>
+          {/* ── Footer ── */}
+          <div className="p-8 border-t border-marketplace-border flex items-center justify-end gap-4 bg-marketplace-card">
+            <button
+              onClick={onClose}
+              className="px-6 py-3 cursor-pointer font-bold text-marketplace-text-secondary hover:text-marketplace-text-primary transition-all"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="min-w-[180px] flex cursor-pointer items-center justify-center gap-3 px-10 py-3 bg-marketplace-accent text-white rounded-xl font-black shadow-lg shadow-marketplace-accent/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {isLoading ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                "نشر المنتج"
+              )}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 }

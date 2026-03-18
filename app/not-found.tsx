@@ -1,9 +1,9 @@
 "use client";
 
+import { Ghost, Home, RotateCcw } from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "motion/react";
-import { Home, ArrowRight, RotateCcw, Ghost } from "lucide-react";
 
 export default function NotFound() {
   const router = useRouter();

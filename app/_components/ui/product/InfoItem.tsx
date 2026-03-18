@@ -1,5 +1,4 @@
 "use client";
-import { motion } from "framer-motion";
 
 export function InfoItem({ icon, label, value, isEditing, onChange }: any) {
   return (
