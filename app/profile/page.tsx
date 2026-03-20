@@ -39,6 +39,7 @@ export default function ProfilePage() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [formData, setFormData] = useState({
     full_name: "",
     username: "",
@@ -99,6 +100,7 @@ export default function ProfilePage() {
 
     if (previewUrl.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
 
+    setIsProcessingImage(true);
     try {
       let processedFile = file;
 
@@ -131,6 +133,8 @@ export default function ProfilePage() {
       // Fallback to original file if processing fails
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+    } finally {
+      setIsProcessingImage(false);
     }
   };
 
@@ -260,7 +264,20 @@ export default function ProfilePage() {
                       <User size={48} />
                     </div>
                   )}
-                  {isEditing && (
+                  {(isProcessingImage || updating) && (
+                    <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 rounded-full">
+                      <Loader2
+                        className="text-marketplace-accent animate-spin"
+                        size={28}
+                      />
+                      <span className="text-[9px] font-black text-white tracking-wide">
+                        {isProcessingImage
+                          ? "جاري المعالجة..."
+                          : "جاري الرفع..."}
+                      </span>
+                    </div>
+                  )}
+                  {isEditing && !isProcessingImage && !updating && (
                     <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
                       <Camera className="text-white w-8 h-8" />
                       <input

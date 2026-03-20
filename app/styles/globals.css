@@ -123,3 +123,39 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-marketplace-accent/10 rounded-full hover:bg-marketplace-accent/30 transition-colors;
 }
+
+/* Scoped scrollbar with a stronger visual style for text panels */
+.cute-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(
+      in srgb,
+      var(--marketplace-accent) 40%,
+      transparent
+    )
+    transparent;
+}
+
+.cute-scrollbar::-webkit-scrollbar {
+  width: 7px;
+}
+
+.cute-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cute-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--marketplace-accent) 65%, #ffffff 35%),
+    color-mix(in srgb, var(--marketplace-accent) 40%, transparent)
+  );
+}
+
+.cute-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--marketplace-accent) 80%, #ffffff 20%),
+    color-mix(in srgb, var(--marketplace-accent) 55%, transparent)
+  );
+}

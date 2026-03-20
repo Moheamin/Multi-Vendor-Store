@@ -176,7 +176,7 @@ export function ProductModal({
               </div>
 
               {/* CONTENT SECTION: Scrollable if text is too long */}
-              <div className="flex flex-col p-8 md:p-12 w-full md:w-1/2 overflow-y-auto">
+              <div className="flex flex-col p-8 md:p-12 w-full md:w-1/2 overflow-y-auto cute-scrollbar">
                 <div className="flex-1">
                   {product.category && (
                     <span className="text-[10px] font-bold text-[var(--marketplace-accent)] mb-4 px-3 py-1 bg-[var(--marketplace-accent)]/10 rounded-full w-fit uppercase tracking-widest">
@@ -193,7 +193,7 @@ export function ProductModal({
                     <span className="text-lg opacity-80 font-bold">د.ع</span>
                   </div>
 
-                  <p className="text-[var(--marketplace-text-secondary)] mb-8 leading-relaxed text-sm md:text-base opacity-70">
+                  <p className="text-[var(--marketplace-text-secondary)] mb-8 leading-relaxed text-sm md:text-base opacity-70 whitespace-pre-line break-words max-h-40 overflow-y-auto cute-scrollbar pl-1">
                     {product.description}
                   </p>
                 </div>

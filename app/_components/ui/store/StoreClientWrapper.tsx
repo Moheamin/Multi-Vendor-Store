@@ -5,10 +5,8 @@ import { InfoItem } from "@/app/_components/ui/product/InfoItem";
 import { ManageProductModal } from "@/app/_components/ui/product/ManageProductModal";
 import { ProductModal } from "@/app/_components/ui/product/ProductModal";
 import { deleteProduct } from "@/app/_lib/data-services/products-service";
-import {
-  getOwnerPhone,
-  uploadAvatar,
-} from "@/app/_lib/data-services/profile-service";
+import { getOwnerPhone } from "@/app/_lib/data-services/profile-service";
+import { uploadStoreLogo } from "@/app/_lib/data-services/admin-service";
 import { updateStoreData } from "@/app/_lib/data-services/store-service";
 import { supabase } from "@/app/_lib/supabase/client";
 import { AnimatePresence, motion } from "framer-motion";
@@ -45,10 +43,12 @@ export default function StoreClientWrapper({
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modal & Edit States
-  const [isOwner, setIsOwner] = useState(false);
+  const [isOwner, setIsOwner] = useState(false); // true only when the logged-in user is this store's owner
+  const [isAdmin, setIsAdmin] = useState(false); // true when the logged-in user has the admin role
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   // Owner product management
@@ -62,6 +62,9 @@ export default function StoreClientWrapper({
   const [copied, setCopied] = useState(false);
   const [editForm, setEditForm] = useState({ ...initialStore });
 
+  // Admins can edit any store; owners can only edit their own
+  const canEdit = isOwner || isAdmin;
+
   // Filter Logic
   const filteredProducts = useMemo(() => {
     return products.filter((product: any) =>
@@ -74,11 +77,21 @@ export default function StoreClientWrapper({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (
-        user?.id === store.owner_id ||
-        user?.user_metadata?.role === "admin"
-      ) {
-        setIsOwner(true);
+      // Not logged in — no edit rights at all
+      if (!user) {
+        setIsOwner(false);
+        setIsAdmin(false);
+      } else {
+        // Ownership: exact ID match only
+        setIsOwner(user.id === store.owner_id);
+
+        // Admin role: always read from DB, never trust user_metadata (can be stale)
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        setIsAdmin(profile?.role === "admin");
       }
       // Always fetch owner phone for WhatsApp order redirect
       const ownerPhone = store.phone
@@ -168,24 +181,45 @@ export default function StoreClientWrapper({
             <div className="absolute -inset-1 bg-marketplace-accent rounded-[3rem] blur opacity-20 animate-pulse" />
             <div className="relative w-36 h-36 md:w-48 md:h-48 rounded-[2.8rem] bg-marketplace-card border border-marketplace-border p-2 shadow-2xl overflow-hidden">
               <img
-                src={store.logo_url}
+                src={editForm.logo_url || store.logo_url}
                 className="w-full h-full object-cover rounded-[2.4rem]"
                 alt="Logo"
               />
-              {isOwner && (
+              {isUploadingLogo && (
+                <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 rounded-[2.4rem]">
+                  <Loader2
+                    className="text-marketplace-accent animate-spin"
+                    size={36}
+                  />
+                  <span className="text-[11px] font-black text-white tracking-wide">
+                    جاري رفع الشعار...
+                  </span>
+                </div>
+              )}
+              {canEdit && isEditing && !isUploadingLogo && (
                 <label className="absolute inset-0 bg-marketplace-bg/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
                   <Camera className="text-marketplace-text-primary" size={32} />
                   <input
                     type="file"
                     className="hidden"
+                    accept="image/*"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const url = await uploadAvatar(store.owner_id, file);
-                        const updated = await updateStoreData(store.id, {
-                          logo_url: url,
-                        });
-                        setStore(updated);
+                        setIsUploadingLogo(true);
+                        try {
+                          const url = await uploadStoreLogo(store.id, file);
+                          if (url) {
+                            setEditForm((prev: any) => ({
+                              ...prev,
+                              logo_url: url,
+                            }));
+                          }
+                        } catch (err) {
+                          console.error("Logo upload failed:", err);
+                        } finally {
+                          setIsUploadingLogo(false);
+                        }
                       }
                     }}
                   />
@@ -241,7 +275,7 @@ export default function StoreClientWrapper({
                 </motion.button>
               )}
             </AnimatePresence>
-            {isOwner && (
+            {canEdit && (
               <button
                 onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
                 className="flex items-center gap-2 cursor-pointer px-6 py-3 bg-marketplace-accent text-primary-foreground rounded-xl font-bold shadow-xl shadow-marketplace-accent/20 hover:scale-105 transition-all"
@@ -292,7 +326,7 @@ export default function StoreClientWrapper({
                 </p>
               )}
             </div>
-            <div className="flex flex-col gap-5 border-r border-marketplace-border pr-10">
+            <div className="flex flex-col gap-5 border-r border-marketplace-border pr-4 md:pr-10 min-w-0 overflow-hidden">
               <InfoItem
                 isEditing={isEditing}
                 icon={<MapPin size={18} />}
@@ -359,8 +393,8 @@ export default function StoreClientWrapper({
             )}
           </div>
 
-          {/* Add product (owner only) */}
-          {isOwner && (
+          {/* Add product (owner or admin) */}
+          {canEdit && (
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="group relative cursor-pointer overflow-hidden bg-marketplace-accent text-primary-foreground flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-black transition-all active:scale-95 w-full md:w-auto"
@@ -396,8 +430,8 @@ export default function StoreClientWrapper({
                     key={product.id}
                     className="relative group/card"
                   >
-                    {/* Owner action overlay (z-30 to stay clickable above out-of-stock overlay) */}
-                    {isOwner && (
+                    {/* Owner/admin action overlay (z-30 to stay clickable above out-of-stock overlay) */}
+                    {canEdit && (
                       <div className="absolute top-3 left-3 z-30 flex gap-2 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all duration-200">
                         {/* Edit */}
                         <button
@@ -453,20 +487,20 @@ export default function StoreClientWrapper({
                     {/* Card itself */}
                     <div
                       onClick={() => {
-                        // Only open modal if it's NOT the owner AND it's NOT out of stock
-                        if (!isOwner && !isOutOfStock) {
+                        // Only open purchase modal for regular visitors on in-stock products
+                        if (!canEdit && !isOutOfStock) {
                           setSelectedProduct(product);
                         }
                       }}
                       className={`transition-all duration-300 ${
-                        !isOwner && !isOutOfStock
+                        !canEdit && !isOutOfStock
                           ? "cursor-pointer"
-                          : !isOwner && isOutOfStock
+                          : !canEdit && isOutOfStock
                             ? "cursor-not-allowed opacity-60 grayscale-[50%]"
-                            : "" // Owner sees the card normally to edit it
+                            : "" // Owner/admin sees the card normally to manage it
                       }`}
                     >
-                      <ProductCard product={product} isOwner={isOwner} />
+                      <ProductCard product={product} isOwner={canEdit} />
                     </div>
                   </motion.div>
                 );
@@ -490,7 +524,7 @@ export default function StoreClientWrapper({
               <p className="text-marketplace-text-secondary">
                 {searchQuery
                   ? "جرب البحث بكلمات أخرى أو تحقق من الإملاء."
-                  : isOwner
+                  : canEdit
                     ? "ابدأ بإضافة منتجك الأول!"
                     : "تابعنا لمعرفة أحدث المنتجات."}
               </p>

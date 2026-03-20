@@ -31,8 +31,8 @@ export const metadata: Metadata = {
     // Add 8-12 relevant keywords
   ],
   authors: [{ name: "Sajad Naeem" }],
-  creator: "Mohyaman Rayed",
-  publisher: "Mohyaman Rayed",
+  creator: "Muhaymen Raed",
+  publisher: "Muhaymen Raed",
 
   // Technical
   formatDetection: {
@@ -107,7 +107,7 @@ export const metadata: Metadata = {
     description:
       "متجر متعدد البائعين يربط بين المشترين والبائعين في سوق صناعية حيوية، حيث يمكن للبائعين عرض منتجاتهم وخدماتهم، وللمشترين اكتشاف وشراء ما يحتاجونه بسهولة وأمان. يوفر منصة شاملة للتجارة الإلكترونية تجمع بين التنوع والسهولة في تجربة التسوق.",
     images: ["https://www.sinaal.ink/og-image.png"],
-    creator: "@_moheamin_", // Optional
+    creator: "@__muhaymen__", // Optional
   },
 
   // Other
@@ -134,13 +134,13 @@ export default function RootLayout({
   const personJsonLd = {
     "@context": "https://schema.org",
     "@type": "Person",
-    name: "Mohyaman Rayed",
+    name: "Muhaymen Raed",
     jobTitle: "Programmer",
     url: "https://www.sinaal.ink/",
     image: "https://www.sinaal.ink/og-image.png",
     sameAs: [
-      "https://github.com/Moheamin",
-      "https://linkedin.com/in/moheaminrayed20",
+      "https://github.com/Muhaymen",
+      "https://linkedin.com/in/muhaymenraed",
 
       // Add all your social profiles
     ],
@@ -156,7 +156,7 @@ export default function RootLayout({
       "software engineering",
     ],
     description:
-      "Mohyaman Rayed is a skilled programmer with expertise in React, TypeScript, Next.js, superbase, tailwindcss, lucide-react, and motion. With a passion for web development and software engineering, Mohyaman has a proven track record of delivering high-quality projects and innovative solutions.",
+      "Muhaymen Raed is a skilled programmer with expertise in React, TypeScript, Next.js, superbase, tailwindcss, lucide-react, and motion. With a passion for web development and software engineering, Mohyaman has a proven track record of delivering high-quality projects and innovative solutions.",
     alumniOf: {
       "@type": "Personal_Organization",
       name: "University of Baghdad",
@@ -179,7 +179,7 @@ export default function RootLayout({
       "متجر متعدد البائعين يربط بين المشترين والبائعين في سوق صناعية حيوية، حيث يمكن للبائعين عرض منتجاتهم وخدماتهم، وللمشترين اكتشاف وشراء ما يحتاجونه بسهولة وأمان. يوفر منصة شاملة للتجارة الإلكترونية تجمع بين التنوع والسهولة في تجربة التسوق.",
     author: {
       "@type": "Person",
-      name: "Mohyaman Rayed",
+      name: "Muhaymen Raed",
     },
     inLanguage: "ar",
   };

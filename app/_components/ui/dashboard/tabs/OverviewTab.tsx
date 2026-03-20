@@ -24,8 +24,8 @@ interface StoreItem {
   id?: string | number;
   store_id?: string | number;
   name: string;
-  products: number; // Updated to match your new Materialized View column
-  revenue: string | number; // Updated to match view column
+  products: number;
+  revenue: string | number;
 }
 
 interface OverviewTabProps {

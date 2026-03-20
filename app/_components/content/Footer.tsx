@@ -1,13 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Store } from "lucide-react";
 import Modal from "@/app/_components/reuseable/Modal";
 import Link from "next/link";
+import { supabase } from "@/app/_lib/supabase/client";
 
 export default function Footer() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState({ title: "", content: "" });
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (profile?.role) setUserRole(profile.role);
+    }
+    checkRole();
+  }, []);
 
   const contentMap = {
     "تصفح المتاجر": `اكتشف مجموعة واسعة من المتاجر الموثوقة في منصة واحدة. بفضل أدوات البحث والتصفية المتقدمة لدينا، يمكنك العثور على المنتجات التي تبحث عنها بسهولة وسرعة من مختلف البائعين، دون الحاجة للتنقل بين مواقع متعددة.`,
@@ -26,6 +44,8 @@ export default function Footer() {
 
     "كن تاجرًا": `انضم إلى منصتنا اليوم وقم بإطلاق متجرك الإلكتروني بسهولة. نوفر لك تصميم متجر موحد واحترافي، ولوحة تحكم متكاملة لإدارة منتجاتك ومبيعاتك، مما يتيح لك الوصول إلى قاعدة واسعة من المشترين دون أي تعقيدات تقنية.`,
 
+    "مجتمع التجار": `شكراً لكونك جزءاً من مجتمع تجار لنك الصناعة! \n\nانضمامك كتاجر يساهم في بناء سوق إلكتروني قوي وموثوق. نحن فخورون بشراكتك ونعمل باستمرار على تطوير المنصة لتسهيل عملك وزيادة مبيعاتك.\n\nمعاً نبني مستقبل التجارة الإلكترونية في العراق. نتمنى لك التوفيق والنجاح الدائم!`,
+
     الموارد: `نقدم لك دليلاً شاملاً وموارد تعليمية تساعدك على إدارة متجرك بفعالية. من كيفية نشر المنتجات وتنسيقها، إلى تتبع المعاملات عبر لوحة تحكم التاجر، لضمان نمو تجارتك بكل سهولة.`,
 
     "شروط الخدمة": `تحدد شروط الخدمة القواعد واللوائح لاستخدام منصتنا كسوق متعدد البائعين. تشمل هذه الشروط حقوق ومسؤوليات كل من المشترين والتجار، وضوابط نشر المنتجات، وصلاحيات الإدارة في التحقق والإشراف لضمان بيئة آمنة وموثوقة للجميع.`,
@@ -35,12 +55,17 @@ export default function Footer() {
     "سياسة الكوكيز": `نستخدم ملفات تعريف الارتباط (Cookies) لتحسين تجربة المستخدم على منصتنا، مثل تذكر تفضيلات البحث والتصفية المتقدمة للمشترين، وتسهيل الوصول السريع للوحات تحكم التجار وتخصيص المحتوى.`,
   };
 
+  const isDealer = userRole === "seller" || userRole === "admin";
+
   const linkGroups = [
     {
       title: "للمشترين",
       links: ["تصفح المتاجر", "كيف يعمل", "الدعم", "عملية الشراء والشحن"],
     },
-    { title: "للتجار", links: ["كن تاجرًا", "الموارد"] },
+    {
+      title: "للتجار",
+      links: [isDealer ? "مجتمع التجار" : "كن تاجرًا", "الموارد"],
+    },
     {
       title: "قانوني",
       links: ["شروط الخدمة", "سياسة الخصوصية", "سياسة الكوكيز"],
@@ -91,6 +116,14 @@ export default function Footer() {
                           <span className="absolute -right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-marketplace-accent rounded-full animate-pulse opacity-0 group-hover:opacity-100" />
                           {link}
                         </Link>
+                      ) : link === "مجتمع التجار" ? (
+                        <button
+                          onClick={() => handleLinkClick(link)}
+                          className="hover:text-marketplace-accent hover:pr-2 transition-all duration-300 inline-block text-marketplace-accent font-extrabold relative group text-right cursor-pointer bg-transparent border-none p-0 focus:outline-none"
+                        >
+                          <span className="absolute -right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-marketplace-accent rounded-full animate-pulse opacity-0 group-hover:opacity-100" />
+                          {link}
+                        </button>
                       ) : (
                         <button
                           onClick={() => handleLinkClick(link)}

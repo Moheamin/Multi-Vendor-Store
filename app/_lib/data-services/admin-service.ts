@@ -67,7 +67,7 @@ export async function adminDeleteUser(userId: string) {
 export async function getAvailableOwners() {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, email")
+    .select("id, full_name")
     .in("role", ["buyer", "seller", "admin"])
     .eq("is_deleted", false);
   if (error) throw new Error(error.message);
@@ -104,7 +104,7 @@ export async function updateStore(storeId: string, updates: any) {
   const { data, error } = await supabase
     .from("stores")
     .update({
-      owner_id: updates.owner_id,
+      owner_id: updates.owner_id || null,
       name: updates.name,
       slug: updates.slug,
       phone: updates.phone,
@@ -122,53 +122,40 @@ export async function updateStore(storeId: string, updates: any) {
   return data;
 }
 
-/**
- * Uploads a store logo to a folder named after the Store ID.
- * @param storeId The UUID from the 'id' column of your 'stores' table.
- * @param file The image file to upload.
- */
 export async function uploadStoreLogo(storeId: string, file: File) {
   const bucket = "stores";
 
+  // CRITICAL: Guard clause to prevent "Cannot read properties of undefined"
   if (!file) {
     console.error("No file provided to uploadStoreLogo");
     return null;
   }
 
   try {
-    // 1. List files in the specific STORE folder (matches public.stores.id)
+    // 1. Cleanup: List files in the specific STORE folder
     const { data: existingFiles, error: listError } = await supabase.storage
       .from(bucket)
       .list(storeId);
 
-    if (listError) {
-      // If this logs a 403, your 'Store Owners Manage via Table' policy is failing
-      console.error("Supabase List Error:", listError);
-    }
+    if (listError) throw listError;
 
-    // 2. Clear out the old store images
+    // 2. Clear old logos (Infinite Storage Principle)
     if (existingFiles && existingFiles.length > 0) {
       const filesToRemove = existingFiles
         .filter((x) => x.name !== ".emptyFolderPlaceholder")
         .map((x) => `${storeId}/${x.name}`);
 
       if (filesToRemove.length > 0) {
-        const { error: removeError } = await supabase.storage
-          .from(bucket)
-          .remove(filesToRemove);
-
-        if (removeError) {
-          console.error("Supabase Remove Error:", removeError);
-        }
+        await supabase.storage.from(bucket).remove(filesToRemove);
       }
     }
 
-    // 3. Prepare the new path: stores/[STORE_ID]/[TIMESTAMP].[EXT]
+    // 3. Prepare path: [STORE_ID]/[TIMESTAMP].[EXT]
     const fileExt = file.name.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${storeId}/${fileName}`;
 
-    // 4. Perform the upload
+    // 4. Perform the upload (This handles INSERT and UPDATE/UPSERT)
     const { error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
@@ -178,7 +165,7 @@ export async function uploadStoreLogo(storeId: string, file: File) {
 
     if (uploadError) throw uploadError;
 
-    // 5. Generate and return the Public URL with a timestamp to bust cache
+    // 5. Return Public URL
     const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
     return `${data.publicUrl}?t=${Date.now()}`;
   } catch (error) {
@@ -186,6 +173,7 @@ export async function uploadStoreLogo(storeId: string, file: File) {
     throw error;
   }
 }
+
 export async function adminUpsertStore(
   storeId: string | undefined,
   storeData: any,

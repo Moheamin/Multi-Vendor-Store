@@ -10,6 +10,7 @@ import {
   Check,
   CheckCircle,
   Filter,
+  Loader2,
   Package,
   Plus,
   Search,
@@ -41,6 +42,7 @@ export function ProductsTab({ data: initialData }: { data: any[] }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
 
   // Keep local state in sync with server state (Real-time update fix)
@@ -84,15 +86,16 @@ export function ProductsTab({ data: initialData }: { data: any[] }) {
   });
 
   async function refreshData() {
+    setIsRefreshing(true);
     try {
-      // Fetch fresh data immediately for instant frontend update, then trigger Next.js refresh
       const updatedProducts = await getAdminProducts();
       setData(updatedProducts);
       router.refresh();
     } catch {
-      // fallback to local refresh if router.refresh fails
       const updatedProducts = await getAdminProducts();
       setData(updatedProducts);
+    } finally {
+      setIsRefreshing(false);
     }
   }
 
@@ -115,11 +118,15 @@ export function ProductsTab({ data: initialData }: { data: any[] }) {
       setData((prev) => prev.filter((p) => p.id !== selectedProduct.id));
       setIsDeleteModalOpen(false);
       setSelectedProduct(null);
+      setIsRefreshing(true);
       router.refresh();
+      const updatedProducts = await getAdminProducts();
+      setData(updatedProducts);
     } catch (err: any) {
       toast.error(err.message || "فشل الحذف");
     } finally {
       setIsDeleting(false);
+      setIsRefreshing(false);
     }
   }
 
@@ -241,7 +248,20 @@ export function ProductsTab({ data: initialData }: { data: any[] }) {
         </button>
       </div>
 
-      <div className="bg-marketplace-card rounded-[2.5rem] border border-marketplace-border overflow-hidden shadow-sm">
+      <div className="relative bg-marketplace-card rounded-[2.5rem] border border-marketplace-border overflow-hidden shadow-sm">
+        {isRefreshing && (
+          <div className="absolute inset-0 z-10 bg-marketplace-card/70 backdrop-blur-[2px] flex items-center justify-center rounded-[2.5rem]">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2
+                className="text-marketplace-accent animate-spin"
+                size={32}
+              />
+              <span className="text-xs font-bold text-marketplace-text-secondary">
+                جاري تحديث البيانات...
+              </span>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-right min-w-[900px]">
             <thead>

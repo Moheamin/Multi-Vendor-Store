@@ -127,6 +127,10 @@ export function AddProductModal({
       toast.error("يرجى ملء الحقول المطلوبة");
       return;
     }
+    if (Number(form.price) < 0 || Number(form.stock_quantity) < 0) {
+      toast.error("يرجى إدخال قيم موجبة للسعر والمخزون");
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -215,6 +219,17 @@ export function AddProductModal({
                     accept="image/*,image/heic"
                     onChange={handleFileChange}
                   />
+                  {isLoading && (
+                    <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 rounded-[2.5rem]">
+                      <Loader2
+                        className="text-marketplace-accent animate-spin"
+                        size={32}
+                      />
+                      <span className="text-[11px] font-black text-white tracking-wide">
+                        جاري معالجة الصورة...
+                      </span>
+                    </div>
+                  )}
                   {previewUrl ? (
                     <>
                       <img
@@ -222,22 +237,29 @@ export function AddProductModal({
                         alt="Product preview"
                         className="absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-1000 group-hover:scale-110"
                       />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
-                        <Camera className="text-marketplace-accent" size={28} />
-                        <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
-                          تغيير الصورة
-                        </span>
-                      </div>
+                      {!isLoading && (
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
+                          <Camera
+                            className="text-marketplace-accent"
+                            size={28}
+                          />
+                          <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
+                            تغيير الصورة
+                          </span>
+                        </div>
+                      )}
                     </>
                   ) : (
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="p-4 bg-marketplace-card rounded-full border border-marketplace-border text-marketplace-text-secondary group-hover:text-marketplace-accent transition-colors">
-                        <Upload size={24} />
+                    !isLoading && (
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="p-4 bg-marketplace-card rounded-full border border-marketplace-border text-marketplace-text-secondary group-hover:text-marketplace-accent transition-colors">
+                          <Upload size={24} />
+                        </div>
+                        <span className="text-xs font-bold text-marketplace-text-secondary">
+                          اضغط لرفع صورة المنتج (يدعم صور الآيفون)
+                        </span>
                       </div>
-                      <span className="text-xs font-bold text-marketplace-text-secondary">
-                        اضغط لرفع صورة المنتج (يدعم صور الآيفون)
-                      </span>
-                    </div>
+                    )
                   )}
                 </div>
               </div>
@@ -279,6 +301,7 @@ export function AddProductModal({
                     onChange={(e) =>
                       setForm({ ...form, price: e.target.value })
                     }
+                    min="0"
                     className="w-full bg-marketplace-bg border border-marketplace-border rounded-2xl py-3.5 pr-11 pl-4 text-marketplace-text-primary font-black outline-none focus:border-marketplace-accent/50 transition-all"
                   />
                 </div>

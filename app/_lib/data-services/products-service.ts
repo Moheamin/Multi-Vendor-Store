@@ -87,62 +87,50 @@ export async function createProduct(productData: {
   return data;
 }
 
-export async function uploadProductImage(userId: string, file: File) {
+export async function uploadProductImage(
+  storeId: string,
+  file: File,
+  productId?: string,
+) {
   const bucket = "products";
 
+  if (!file) return null;
+
+  // IMPORTANT: The path must start with 'stores/' for our policy to work correctly.
+  // When productId is known (edit flow) we nest under it so old images are cleaned up.
+  const folderPath = productId
+    ? `stores/${storeId}/${productId}`
+    : `stores/${storeId}`;
+
   try {
-    // 1. List files in the user's product folder
-    const { data: existingFiles, error: listError } = await supabase.storage
-      .from(bucket)
-      .list(userId);
-
-    // 2. Clear the folder if files exist
-    if (existingFiles && existingFiles.length > 0) {
-      const filesToRemove = existingFiles
-        .filter((x) => x.name !== ".emptyFolderPlaceholder")
-        .map((x) => `${userId}/${x.name}`);
-
-      if (filesToRemove.length > 0) {
-        const { error: removeError } = await supabase.storage
-          .from(bucket)
-          .remove(filesToRemove);
-        if (removeError) {
-          console.error(
-            "Supabase Remove Error (Check RLS Policies!):",
-            removeError,
-          );
-        }
+    // 1. Cleanup old files in this specific folder (only when productId is known)
+    if (productId) {
+      const { data: existingFiles } = await supabase.storage
+        .from(bucket)
+        .list(folderPath);
+      if (existingFiles && existingFiles.length > 0) {
+        const filesToRemove = existingFiles.map(
+          (x) => `${folderPath}/${x.name}`,
+        );
+        await supabase.storage.from(bucket).remove(filesToRemove);
       }
     }
 
-    // 3. Prepare path: products/USER_ID/TIMESTAMP.ext
+    // 2. Prepare unique path
     const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${userId}/${fileName}`;
+    const filePath = `${folderPath}/${Date.now()}.${fileExt}`;
 
-    // 4. Upload
+    // 3. Upload
     const { error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: true,
-      });
+      .upload(filePath, file, { cacheControl: "3600", upsert: true });
 
     if (uploadError) throw uploadError;
 
-    // 5. Return Public URL
     const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
     return `${data.publicUrl}?t=${Date.now()}`;
   } catch (error) {
-    console.error("Product upload error:", error);
+    console.error("Upload error:", error);
     throw error;
   }
-}
-export async function getInventoryWarnings() {
-  const { data } = await supabase
-    .from("products")
-    .select("*, stores(name)")
-    .lt("stock_quantity", 5)
-    .limit(5);
-  return data || [];
 }

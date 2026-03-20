@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "react-hot-toast";
 
 // دالة معالجة الصورة: تغيير الحجم، الضغط، والتحويل إلى WebP
 const processImage = async (file: File): Promise<File> => {
@@ -164,6 +165,13 @@ export function StoreModal({
   };
 
   const handleSubmit = async () => {
+    if (
+      Number(formData.monthly_hosting_fee) < 0 ||
+      Number(formData.commission_fee_per_sale) < 0
+    ) {
+      toast.error("يرجى إدخال قيم موجبة للرسوم");
+      return;
+    }
     setLoading(true);
     try {
       let finalLogoUrl = formData.logo_url;
@@ -194,7 +202,7 @@ export function StoreModal({
       onClose();
     } catch (error: any) {
       console.error("Operation failed:", error.message);
-      alert(`حدث خطأ: ${error.message}`);
+      toast.error(`حدث خطأ: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -383,6 +391,7 @@ export function StoreModal({
                       monthly_hosting_fee: e.target.value,
                     })
                   }
+                  min="0"
                   className="w-full bg-marketplace-text-secondary/5 border border-marketplace-border rounded-2xl py-3.5 px-4 text-marketplace-text-primary font-black outline-none focus:border-marketplace-accent/50"
                 />
               </div>
@@ -400,6 +409,9 @@ export function StoreModal({
                       commission_fee_per_sale: e.target.value,
                     })
                   }
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
                   className="w-full bg-marketplace-text-secondary/5 border border-marketplace-border rounded-2xl py-3.5 px-4 text-marketplace-text-primary font-black outline-none focus:border-marketplace-accent/50"
                 />
               </div>

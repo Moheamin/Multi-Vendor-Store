@@ -2,9 +2,11 @@
 
 import {
   adminDeleteStore,
+  getAdminStores,
   adminToggleStoreActive,
   getAvailableOwners,
 } from "@/app/_lib/data-services/admin-service";
+import { supabase } from "@/app/_lib/supabase/client";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
@@ -16,7 +18,6 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import { StoreModal } from "../components/StoreModal";
@@ -26,14 +27,13 @@ import { toast } from "react-hot-toast";
 
 export function StoresTab({
   data: initialData,
-  adminStoreData: storeData,
+  adminStoreData: _storeData,
   sideData: subData,
 }: {
   data: any[];
   adminStoreData: any;
   sideData: any;
 }) {
-  const router = useRouter();
   const [data, setData] = useState<any[]>(initialData);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("الكل");
@@ -57,6 +57,10 @@ export function StoresTab({
   }, []);
 
   useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
+  useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (filterRef.current && !filterRef.current.contains(e.target as Node))
         setIsFilterOpen(false);
@@ -65,22 +69,22 @@ export function StoresTab({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // useEffect(() => {
-  //   const channel = supabase
-  //     .channel("realtime-stores")
-  //     .on(
-  //       "postgres_changes",
-  //       { event: "*", schema: "public", table: "stores" },
-  //       () => {
-  //         refreshData();
-  //       },
-  //     )
-  //     .subscribe();
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-stores-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "stores" },
+        async () => {
+          await refreshData();
+        },
+      )
+      .subscribe();
 
-  //   return () => {
-  //     supabase.removeChannel(channel);
-  //   };
-  // }, []);
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, []);
 
   const statuses = ["الكل", "نشط", "معطل"];
   const filteredStores = data.filter((store) => {
@@ -99,8 +103,26 @@ export function StoresTab({
 
   async function refreshData() {
     try {
-      // setData(storeData);
-      router.refresh();
+      const stores = await getAdminStores();
+      const mappedStores = stores.map((store: any) => ({
+        id: store.id,
+        name: store.name,
+        ownerId: store.owner_id,
+        dealerName: store.dealer_name,
+        productCount: store.product_count,
+        totalRevenue: store.total_revenue,
+        slug: store.slug,
+        phone: store.phone,
+        description: store.description,
+        isActive: store.is_active,
+        createdAt: store.created_at,
+        monthlyHostingFee: store.monthly_hosting_fee,
+        commissionFeePerSale: store.commission_fee_per_sale,
+        address: store.address,
+        logoUrl: store.logo_url,
+        isOfficial: store.is_official,
+      }));
+      setData(mappedStores);
     } catch (err) {
       console.error("Failed to refresh stores:", err);
     }
@@ -245,6 +267,7 @@ export function StoresTab({
                 <StoreRow
                   key={store.id}
                   store={store}
+                  owners={owners}
                   sub={subData.find((s: any) => s.id === store.id) || {}}
                   onEdit={handleEdit}
                   onDelete={handleDeletePrompt}
@@ -286,11 +309,21 @@ export function StoresTab({
 }
 
 // StoreRow المحدث ليتعامل مع متغيرات camelCase الجديدة
-function StoreRow({ store, onEdit, onDelete, onToggleActive, sub }: any) {
+function StoreRow({
+  store,
+  onEdit,
+  onDelete,
+  onToggleActive,
+  sub,
+  owners,
+}: any) {
   const actions = buildStoreActions(store, onEdit, onDelete, onToggleActive);
 
   // استخدام المتغيرات الجديدة من المابينغ
-  const ownerName = sub.name || "—";
+  const ownerName =
+    store.dealerName ||
+    owners?.find((owner: any) => owner.id === store.ownerId)?.full_name ||
+    "—";
   const revenue = sub.revenue
     ? `${parseInt(sub.revenue).toLocaleString()} د.ع`
     : "0 د.ع";

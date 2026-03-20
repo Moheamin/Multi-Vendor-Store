@@ -186,6 +186,7 @@ export async function getRecentUsers(limit = 5) {
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
+    .eq("is_deleted", false)
     .order("created_at", { ascending: false })
     .limit(limit);
 

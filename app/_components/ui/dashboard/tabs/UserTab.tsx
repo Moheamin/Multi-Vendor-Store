@@ -4,6 +4,7 @@ import {
   adminDeleteUser,
   getAdminUsers,
 } from "@/app/_lib/data-services/admin-service";
+import { supabase } from "@/app/_lib/supabase/client";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Calendar,
@@ -38,6 +39,32 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-profiles-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        async () => {
+          try {
+            const freshUsers = await getAdminUsers();
+            setData(freshUsers);
+          } catch (err) {
+            console.error("Failed to sync realtime user updates", err);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, []);
 
   const roles = [

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Ban } from "lucide-react";
+import { AlertTriangle, Ban, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 
@@ -22,8 +22,9 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const stock = product.stock_quantity ?? null;
   const isOutOfStock = stock !== null && stock === 0;
+  const isLastUnit = stock !== null && stock === 1;
   const isLowStock =
-    stock !== null && stock > 0 && stock <= LOW_STOCK_THRESHOLD;
+    stock !== null && stock > 1 && stock <= LOW_STOCK_THRESHOLD;
 
   return (
     <motion.div
@@ -33,9 +34,11 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
         ${
           isOutOfStock
             ? "border-border/20 opacity-60 grayscale cursor-not-allowed"
-            : isLowStock
-              ? "border-amber-500/30 hover:border-amber-400/60 hover:shadow-amber-500/10 hover:shadow-xl cursor-pointer group"
-              : "border-border/40 hover:border-marketplace-accent/30 hover:shadow-xl cursor-pointer group"
+            : isLastUnit
+              ? "border-rose-500/40 hover:border-rose-400/70 hover:shadow-rose-500/15 hover:shadow-xl cursor-pointer group"
+              : isLowStock
+                ? "border-amber-500/30 hover:border-amber-400/60 hover:shadow-amber-500/10 hover:shadow-xl cursor-pointer group"
+                : "border-border/40 hover:border-marketplace-accent/30 hover:shadow-xl cursor-pointer group"
         }
       `}
     >
@@ -79,26 +82,40 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
           </div>
         )}
 
+        {/* Last unit badge */}
+        {isLastUnit && (
+          <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-rose-500/90 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg z-10 animate-pulse">
+            <span>{`${stock} متبقية فقط`}</span>
+            <Flame size={11} className="shrink-0" />
+          </div>
+        )}
+
         {/* Low stock badge */}
         {isLowStock && !isOutOfStock && (
           <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg z-10">
             <AlertTriangle size={11} className="shrink-0" />
-            <span>{isOwner ? `${stock} متبقية فقط` : "كمية محدودة"}</span>
+            <span>{`${stock} متبقية فقط`}</span>
           </div>
         )}
 
         {/* Owner: show stock count badge (always) */}
-        {isOwner && !isLowStock && !isOutOfStock && stock !== null && (
-          <div className="absolute top-2 right-2 bg-marketplace-card/80 backdrop-blur-sm border border-marketplace-border text-marketplace-text-secondary text-[10px] font-bold px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            {stock} في المخزن
-          </div>
-        )}
+        {isOwner &&
+          !isLowStock &&
+          !isLastUnit &&
+          !isOutOfStock &&
+          stock !== null && (
+            <div className="absolute top-2 right-2 bg-marketplace-card/80 backdrop-blur-sm border border-marketplace-border text-marketplace-text-secondary text-[10px] font-bold px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10">
+              {stock} في المخزن
+            </div>
+          )}
 
         <div
           className={`absolute inset-0 transition-colors duration-300 ${
-            isLowStock
-              ? "bg-amber-400/0 group-hover:bg-amber-400/5"
-              : "bg-marketplace-accent/0 group-hover:bg-marketplace-accent/5"
+            isLastUnit
+              ? "bg-rose-400/0 group-hover:bg-rose-400/5"
+              : isLowStock
+                ? "bg-amber-400/0 group-hover:bg-amber-400/5"
+                : "bg-marketplace-accent/0 group-hover:bg-marketplace-accent/5"
           }`}
         />
       </div>
@@ -109,9 +126,11 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
           className={`font-bold text-marketplace-text-primary text-lg mb-1 line-clamp-1 transition-colors ${
             isOutOfStock
               ? "text-marketplace-text-secondary"
-              : isLowStock
-                ? "group-hover:text-amber-400"
-                : "group-hover:text-marketplace-accent"
+              : isLastUnit
+                ? "group-hover:text-rose-400"
+                : isLowStock
+                  ? "group-hover:text-amber-400"
+                  : "group-hover:text-marketplace-accent"
           }`}
         >
           {product.name}
@@ -126,9 +145,11 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
               className={`text-2xl font-black ${
                 isOutOfStock
                   ? "text-marketplace-text-secondary/50 line-through"
-                  : isLowStock
-                    ? "text-amber-400"
-                    : "text-marketplace-accent"
+                  : isLastUnit
+                    ? "text-rose-400"
+                    : isLowStock
+                      ? "text-amber-400"
+                      : "text-marketplace-accent"
               }`}
             >
               {product.price.toLocaleString()}
@@ -137,9 +158,11 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
               className={`text-xs font-bold opacity-80 ${
                 isOutOfStock
                   ? "text-marketplace-text-secondary/50"
-                  : isLowStock
-                    ? "text-amber-400"
-                    : "text-marketplace-accent"
+                  : isLastUnit
+                    ? "text-rose-400"
+                    : isLowStock
+                      ? "text-amber-400"
+                      : "text-marketplace-accent"
               }`}
             >
               د.إ
@@ -153,6 +176,11 @@ export function ProductCard({ product, isOwner = false }: ProductCardProps) {
           )}
         </div>
       </div>
+
+      {/* Last unit bottom bar */}
+      {isLastUnit && (
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-rose-400/80 to-transparent" />
+      )}
 
       {/* Low stock bottom bar */}
       {isLowStock && !isOutOfStock && (
