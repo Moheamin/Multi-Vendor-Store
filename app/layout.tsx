@@ -139,7 +139,7 @@ export default function RootLayout({
     url: "https://www.sinaal.ink/",
     image: "https://www.sinaal.ink/og-image.png",
     sameAs: [
-      "https://github.com/Muhaymen",
+      "https://github.com/MuhaymenRaed",
       "https://linkedin.com/in/muhaymenraed",
 
       // Add all your social profiles

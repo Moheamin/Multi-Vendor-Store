@@ -222,7 +222,7 @@ export function ProductModal({
 
     setIsLoading(true);
     try {
-      let finalImageUrl = form.image_url;
+      let finalImageUrl: string | null = form.image_url;
       if (selectedFile) {
         finalImageUrl = await uploadProductImage(
           form.store_id,

@@ -132,7 +132,7 @@ export function ManageProductModal({
     }
     setIsLoading(true);
     try {
-      let finalImageUrl = form.image_url;
+      let finalImageUrl: string | null = form.image_url;
       if (selectedFile) {
         finalImageUrl = await uploadProductImage(
           storeId,
@@ -147,7 +147,7 @@ export function ManageProductModal({
         description: form.description,
         stock_quantity: Number(form.stock_quantity) || 0,
         category_id: form.category_id ? Number(form.category_id) : null,
-        image_url: finalImageUrl,
+        image_url: finalImageUrl ?? undefined,
       };
 
       const updated = await updateProduct(product.id, payload);
