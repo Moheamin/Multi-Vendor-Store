@@ -18,6 +18,7 @@ import {
   FileText,
   CheckCircle2,
   Store,
+  X,
 } from "lucide-react";
 
 interface OrderRevenueItem {
@@ -53,6 +54,8 @@ export function RevenueTab({
   );
   const [selectedMonth, setSelectedMonth] = useState("الكل");
   const [selectedStore, setSelectedStore] = useState("الكل");
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const monthsList = [
     "يناير",
@@ -122,6 +125,16 @@ export function RevenueTab({
       };
     });
   }, [filteredData]);
+
+  const handleOrderClick = (order: any) => {
+    setSelectedOrder(order);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedOrder(null);
+  };
 
   return (
     <div className="space-y-8 pb-12" dir="rtl">
@@ -193,7 +206,7 @@ export function RevenueTab({
         {[
           {
             label: "أرباح الإدارة (مؤكد)",
-            value: totals.verifiedProfit,
+            value: totals.verifiedProfit * totals.verifiedCount, // Assuming profit is per order, multiply by count for total profit
             sub: `${totals.verifiedCount} طلب ناجح`,
             icon: <CheckCircle2 />,
             color: "text-green-500",
@@ -201,7 +214,7 @@ export function RevenueTab({
           },
           {
             label: "أرباح الإدارة (معلق)",
-            value: totals.pendingProfit,
+            value: totals.pendingProfit * totals.pendingCount, // Assuming profit is per order, multiply by count for total profit
             sub: `${totals.pendingCount} طلب قيد التدقيق`,
             icon: <Clock />,
             color: "text-amber-500",
@@ -380,7 +393,8 @@ export function RevenueTab({
                 {chartData.map((row, idx) => (
                   <tr
                     key={idx}
-                    className="hover:bg-marketplace-card-hover transition-colors group"
+                    className="hover:bg-marketplace-card-hover transition-colors group cursor-pointer"
+                    onClick={() => handleOrderClick(row)}
                   >
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -428,6 +442,95 @@ export function RevenueTab({
           </div>
         </motion.div>
       </div>
+
+      {/* --- MODAL --- */}
+      {showModal && selectedOrder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-2"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-marketplace-card border border-marketplace-accent/40 rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-lg sm:max-w-xl relative animate-fade-in ring-2 ring-marketplace-accent/10 transition-all duration-300"
+            style={{
+              boxShadow:
+                "0 8px 40px 0 rgba(0,188,212,0.10), 0 1.5px 8px 0 rgba(0,0,0,0.10)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeModal}
+              className="absolute left-4 top-4 sm:left-6 sm:top-6 bg-gradient-to-tr from-marketplace-accent/10 to-marketplace-bg/80 text-marketplace-accent hover:text-white hover:bg-marketplace-accent transition-all duration-200 rounded-full p-2 sm:p-2.5 shadow-lg border-2 border-marketplace-accent/20 hover:border-marketplace-accent/60 cursor-pointer flex items-center justify-center z-50 focus:outline-none focus:ring-2 focus:ring-marketplace-accent/40"
+              title="إغلاق"
+              aria-label="إغلاق"
+              type="button"
+              style={{
+                width: "44px",
+                height: "44px",
+                minWidth: "44px",
+                minHeight: "44px",
+              }}
+            >
+              <span className="flex items-center justify-center w-full h-full">
+                <X size={22} className="drop-shadow-sm" />
+              </span>
+            </button>
+            <h3 className="text-2xl font-black text-marketplace-accent mb-6 text-center tracking-tight drop-shadow-sm">
+              تفاصيل الطلب
+            </h3>
+            <div className="space-y-4 text-marketplace-text-primary text-base font-medium">
+              <div className="flex justify-between border-b border-marketplace-border pb-2">
+                <span className="font-bold text-marketplace-text-secondary">
+                  المنتج:
+                </span>
+                <span>{selectedOrder.productName}</span>
+              </div>
+              <div className="flex justify-between border-b border-marketplace-border pb-2">
+                <span className="font-bold text-marketplace-text-secondary">
+                  المتجر:
+                </span>
+                <span>{selectedOrder.storeName}</span>
+              </div>
+              <div className="flex justify-between border-b border-marketplace-border pb-2">
+                <span className="font-bold text-marketplace-text-secondary">
+                  السعر:
+                </span>
+                <span className="text-marketplace-accent font-black">
+                  {selectedOrder.price.toLocaleString("en-US")} د.ع
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-marketplace-border pb-2">
+                <span className="font-bold text-marketplace-text-secondary">
+                  عمولة الإدارة:
+                </span>
+                <span className="text-green-500 font-black">
+                  {selectedOrder.profit.toLocaleString("en-US")} د.ع
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-marketplace-border pb-2">
+                <span className="font-bold text-marketplace-text-secondary">
+                  الحالة:
+                </span>
+                <span
+                  className={
+                    selectedOrder.status === "verified_sold"
+                      ? "text-green-500 font-bold"
+                      : "text-amber-500 font-bold"
+                  }
+                >
+                  {selectedOrder.status === "verified_sold" ? "مؤكد" : "معلق"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-bold text-marketplace-text-secondary">
+                  التاريخ:
+                </span>
+                <span>{selectedOrder.displayTime}</span>
+              </div>
+              {/* Add more details here as needed */}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

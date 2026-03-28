@@ -1,6 +1,7 @@
 "use client";
 
 import { AddProductModal } from "@/app/_components/ui/product/AddProductModal";
+
 import { InfoItem } from "@/app/_components/ui/product/InfoItem";
 import { ManageProductModal } from "@/app/_components/ui/product/ManageProductModal";
 import { ProductModal } from "@/app/_components/ui/product/ProductModal";
@@ -56,7 +57,6 @@ export default function StoreClientWrapper({
   const [deletingProductId, setDeletingProductId] = useState<string | null>(
     null,
   );
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const [dealerPhone, setDealerPhone] = useState("");
   const [copied, setCopied] = useState(false);
@@ -124,12 +124,6 @@ export default function StoreClientWrapper({
   };
 
   const handleDeleteProduct = async (productId: string) => {
-    if (confirmDeleteId !== productId) {
-      setConfirmDeleteId(productId);
-      // Auto-cancel confirmation after 3s
-      setTimeout(() => setConfirmDeleteId(null), 3000);
-      return;
-    }
     setDeletingProductId(productId);
     try {
       await deleteProduct(productId);
@@ -138,7 +132,6 @@ export default function StoreClientWrapper({
       console.error(err);
     } finally {
       setDeletingProductId(null);
-      setConfirmDeleteId(null);
     }
   };
 
@@ -165,7 +158,7 @@ export default function StoreClientWrapper({
           <motion.img
             initial={{ scale: 1.1, opacity: 0 }}
             animate={{ scale: 1, opacity: 0.3 }}
-            src={store.logo_url}
+            src={store.logo_url || undefined}
             className="w-full h-full object-cover blur-[80px] saturate-150"
             alt=""
           />
@@ -180,11 +173,13 @@ export default function StoreClientWrapper({
           >
             <div className="absolute -inset-1 bg-marketplace-accent rounded-[3rem] blur opacity-20 animate-pulse" />
             <div className="relative w-36 h-36 md:w-48 md:h-48 rounded-[2.8rem] bg-marketplace-card border border-marketplace-border p-2 shadow-2xl overflow-hidden">
-              <img
-                src={editForm.logo_url || store.logo_url}
-                className="w-full h-full object-cover rounded-[2.4rem]"
-                alt="Logo"
-              />
+              {editForm.logo_url || store.logo_url ? (
+                <img
+                  src={editForm.logo_url || store.logo_url}
+                  className="w-full h-full object-cover rounded-[2.4rem]"
+                  alt="Logo"
+                />
+              ) : null}
               {isUploadingLogo && (
                 <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 rounded-[2.4rem]">
                   <Loader2
@@ -455,31 +450,7 @@ export default function StoreClientWrapper({
                         </button>
 
                         {/* Delete (with confirm) */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteProduct(product.id);
-                          }}
-                          disabled={deletingProductId === product.id}
-                          className={`w-9 h-9 cursor-pointer backdrop-blur-md border rounded-xl flex items-center justify-center transition-all shadow-lg ${
-                            confirmDeleteId === product.id
-                              ? "bg-destructive text-white border-destructive animate-pulse"
-                              : "bg-marketplace-card/90 border-marketplace-border text-marketplace-text-secondary hover:text-destructive hover:border-destructive/50"
-                          }`}
-                          title={
-                            confirmDeleteId === product.id
-                              ? "اضغط مرة أخرى للتأكيد"
-                              : "حذف"
-                          }
-                        >
-                          {deletingProductId === product.id ? (
-                            <Loader2 size={15} className="animate-spin" />
-                          ) : confirmDeleteId === product.id ? (
-                            <AlertTriangle size={15} />
-                          ) : (
-                            <Trash2 size={15} />
-                          )}
-                        </button>
+                        {/* Delete button is now handled inside ProductCard via ConfirmDeleteModal */}
                       </div>
                     )}
 
@@ -509,7 +480,12 @@ export default function StoreClientWrapper({
                             : "" // Owner/admin sees the card normally to manage it
                       }`}
                     >
-                      <ProductCard product={product} isOwner={canEdit} />
+                      <ProductCard
+                        product={product}
+                        isOwner={canEdit}
+                        onDelete={handleDeleteProduct}
+                        // Optionally, pass deleting state if you want to show loading in the modal
+                      />
                     </div>
                   </motion.div>
                 );

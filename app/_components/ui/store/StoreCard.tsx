@@ -42,7 +42,7 @@ export function StoreCard({ store }: any) {
             </AnimatePresence>
 
             <motion.img
-              src={store.logo_url}
+              src={store.logo_url || undefined}
               alt={store.name}
               initial={{ opacity: 0 }}
               animate={{ opacity: isLoaded ? 1 : 0 }}
@@ -51,11 +51,7 @@ export function StoreCard({ store }: any) {
               className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
             />
           </>
-        ) : (
-          <div className="w-full h-full bg-muted/20 flex items-center justify-center">
-            <div className="w-16 h-16 bg-marketplace-accent/10 rounded-full animate-pulse" />
-          </div>
-        )}
+        ) : null}
         {/* Subtle Overlay Gradient */}
         <div className="absolute inset-0 bg-linear-to-t from-marketplace-card via-transparent to-transparent opacity-60 z-10" />
       </div>

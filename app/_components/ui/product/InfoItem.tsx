@@ -17,7 +17,7 @@ export function InfoItem({ icon, label, value, isEditing, onChange }: any) {
             className="w-full bg-marketplace-bg/50 border-b border-marketplace-accent/30 outline-none text-sm text-marketplace-text-primary font-bold focus:border-marketplace-accent transition-colors"
           />
         ) : (
-          <p className="text-sm text-marketplace-text-primary font-bold break-words">
+          <p className="text-sm text-marketplace-text-primary font-bold wrap-break-word">
             {value || "غير متوفر"}
           </p>
         )}

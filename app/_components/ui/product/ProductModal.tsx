@@ -41,7 +41,7 @@ export function ProductModal({
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const ADMIN_WHATSAPP = "9647717333838";
+  // const ADMIN_WHATSAPP = "9647717333838";
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -106,19 +106,22 @@ export function ProductModal({
         `══════════════════`,
         ``,
         `*معلومات إدارية:*`,
-        `  المتجر: ${store_name || "غير معروف"}`,
-        `  هاتف التاجر: ${dealer_phone || "غير متوفر"}`,
         `  التاريخ: ${formattedDate}`,
       ].join("\n");
 
       const encoded = encodeURIComponent(message);
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+      let whatsappNumber = dealer_phone || "";
+      if (whatsappNumber && !whatsappNumber.startsWith("964")) {
+        whatsappNumber = whatsappNumber.replace(/^0/, "");
+        whatsappNumber = `964${whatsappNumber}`;
+      }
       if (isMobile) {
-        window.location.href = `whatsapp://send?phone=${ADMIN_WHATSAPP}&text=${encoded}`;
+        window.location.href = `whatsapp://send?phone=${whatsappNumber}&text=${encoded}`;
       } else {
         window.open(
-          `https://wa.me/${ADMIN_WHATSAPP}?text=${encoded}`,
+          `https://wa.me/${whatsappNumber}?text=${encoded}`,
           "_blank",
         );
       }
@@ -165,7 +168,7 @@ export function ProductModal({
 
               {/* IMAGE SECTION: Fixed dimensions */}
               <div
-                className={`relative w-full md:w-1/2 h-[300px] md:h-auto overflow-hidden ${isOutOfStock ? "grayscale" : ""}`}
+                className={`relative w-full md:w-1/2 h-75 md:h-auto overflow-hidden ${isOutOfStock ? "grayscale" : ""}`}
               >
                 {product.image_url ? (
                   <img
@@ -209,7 +212,7 @@ export function ProductModal({
 
                   <p
                     dir="auto"
-                    className="text-marketplace-text-secondary mb-8 leading-relaxed text-sm md:text-base opacity-70 whitespace-pre-line break-words max-h-40 overflow-y-auto cute-scrollbar pl-1"
+                    className="text-marketplace-text-secondary mb-8 leading-relaxed text-sm md:text-base opacity-70 whitespace-pre-line wrap-break-word max-h-40 overflow-y-auto cute-scrollbar pl-1"
                   >
                     {product.description}
                   </p>
