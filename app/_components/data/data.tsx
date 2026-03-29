@@ -74,7 +74,7 @@ export async function getDashboardData() {
 
   // 3. Format Users Table
   const usersData = recentUsers.map((user: any) => ({
-    id: user.id,
+    ...user, // Preserve all original fields, including created_at
     name: user.full_name || "مستخدم جديد",
     email: user.email || "بدون بريد",
     phone: user.phone || "بدون رقم هاتف",

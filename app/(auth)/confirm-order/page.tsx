@@ -133,7 +133,7 @@ function ConfirmOrderPageContent() {
               <p className="text-xs text-marketplace-text-secondary">
                 تواجه مشكلة؟{" "}
                 <Link
-                  href="mailto:support@market.com"
+                  href="mailto:sajadnaeem2024@gmail.com"
                   className="text-marketplace-text-primary font-medium hover:underline underline-offset-4"
                 >
                   تواصل مع الدعم الفني

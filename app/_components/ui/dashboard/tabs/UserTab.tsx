@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  adminDeleteUser,
-  getAdminUsers,
-} from "@/app/_lib/data-services/admin-service";
+import { getAdminUsers } from "@/app/_lib/data-services/admin-service";
 import { supabase } from "@/app/_lib/supabase/client";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -16,7 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal";
 import { TableActions, buildUserActions } from "../components/TableActions";
 import { UserModal } from "../components/UserModal";
@@ -31,9 +28,16 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const ITEMS_PER_PAGE = 20;
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+
+  // 1. Fetch current logged-in user ID
+  useEffect(() => {
+    getAdminUsers();
+  }, [getAdminUsers]);
+
   const sentinelRef = useCallback((node: HTMLDivElement | null) => {
     if (!node) return;
     const observer = new IntersectionObserver(
@@ -87,13 +91,24 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
     };
   }, []);
 
-  const roles = [
-    "الكل",
-    ...Array.from(new Set(data.map((u) => u.role).filter(Boolean))),
-  ];
+  // Arabic role labels for filter
+  const roleLabels: Record<string, string> = {
+    admin: "مدير",
+    seller: "تاجر",
+    buyer: "مشتري",
+    guest: "زائر",
+    مدير: "مدير",
+    تاجر: "تاجر",
+    مشتري: "مشتري",
+    زائر: "زائر",
+  };
+  const uniqueRoles = Array.from(
+    new Set(data.map((u) => u.role).filter(Boolean)),
+  );
+  const roles = ["الكل", ...uniqueRoles.map((r) => roleLabels[r] || r)];
 
   const filteredUsers = data.filter((user) => {
-    if (!user) return false; // Safety check
+    if (!user) return false;
     if (user.is_deleted) return false;
 
     const name = (user.full_name || user.name || "").toLowerCase();
@@ -119,12 +134,35 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
     }
   }
 
+  // 2. Calculated admin count
+  const adminCount = data.filter(
+    (u) => u.role === "admin" || u.role === "مدير",
+  ).length;
+
   function handleEdit(user: any) {
     setSelectedUser(user);
     setIsUserModalOpen(true);
   }
 
+  // 3. Logic to show toast when trying to delete last admin
   function handleDeletePrompt(user: any) {
+    const isAdmin = user.role === "admin" || user.role === "مدير";
+    const isSelf = currentUserId === user.id;
+
+    if (isAdmin && adminCount <= 1) {
+      if (isSelf) {
+        toast.error(
+          "لا يمكنك حذف حسابك، يجب أن يكون هناك مدير واحد على الأقل في النظام.",
+          {
+            description: "قم بتعيين مدير آخر قبل محاولة حذف هذا الحساب.",
+          },
+        );
+      } else {
+        toast.error("لا يمكن حذف هذا المستخدم لأنه المدير الوحيد المتبقي.");
+      }
+      return; // Exit here, don't open modal
+    }
+
     setSelectedUser(user);
     setIsDeleteModalOpen(true);
   }
@@ -133,30 +171,28 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
     if (!selectedUser) return;
     setIsDeleting(true);
     try {
-      await adminDeleteUser(selectedUser.id);
+      const res = await fetch("/api/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedUser.id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "فشل الحذف");
+      setData((prev) => prev.filter((u) => u.id !== selectedUser.id));
       toast.success("تم حذف المستخدم بنجاح");
-
-      // Update the local state instead of just removing the user
-      setData((prev) =>
-        prev.map((u) =>
-          u.id === selectedUser.id ? { ...u, is_deleted: true } : u,
-        ),
-      );
-
-      setIsDeleteModalOpen(false);
-      setSelectedUser(null);
     } catch (err: any) {
       toast.error(err.message || "فشل الحذف");
     } finally {
+      setIsDeleteModalOpen(false);
+      setSelectedUser(null);
       setIsDeleting(false);
     }
   }
+
   return (
-    <div className="space-y-6" dir="rtl">
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-marketplace-card p-2.5 rounded-[2.2rem] border border-marketplace-border shadow-sm">
-        {/* Main Container - Flex-1 makes this section fill the width */}
-        <div className="flex items-center gap-2 w-full flex-1">
-          {/* Search Input - flex-1 here ensures it stretches to the very end before the filter */}
+    <div className="flex flex-col gap-6 w-full">
+      <div className="flex items-center w-full flex-1">
+        <div className="flex flex-1 items-center bg-marketplace-card/80 backdrop-blur-xl border border-marketplace-border rounded-2xl shadow-lg px-4 py-2 gap-2">
           <div className="relative flex-1 group">
             <Search
               className="absolute right-4 top-1/2 -translate-y-1/2 text-marketplace-text-secondary group-focus-within:text-marketplace-accent transition-colors"
@@ -167,30 +203,29 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
               placeholder="البحث بالاسم، البريد، أو الهاتف..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-marketplace-bg border border-transparent focus:border-marketplace-accent/20 rounded-[1.5rem] py-3 pr-11 pl-4 outline-none text-marketplace-text-primary font-bold transition-all"
+              className="w-full bg-transparent border-none focus:ring-2 focus:ring-marketplace-accent/30 rounded-[1.5rem] py-3 pr-11 pl-4 outline-none text-marketplace-text-primary font-bold transition-all text-right text-lg"
+              style={{ minWidth: 0 }}
             />
           </div>
-
-          {/* Filter Button - stays at the end */}
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`p-3.5 rounded-2xl cursor-pointer border transition-all ${
+              className={`p-3.5 rounded-2xl cursor-pointer border transition-all duration-200 shadow-sm ${
                 isFilterOpen
                   ? "bg-marketplace-accent text-white border-marketplace-accent"
-                  : "bg-marketplace-bg text-marketplace-text-primary border-marketplace-border hover:border-marketplace-accent/30"
+                  : "bg-marketplace-bg text-marketplace-text-primary border-marketplace-border hover:border-marketplace-accent/30 hover:bg-marketplace-card-hover"
               }`}
+              style={{ minWidth: 48 }}
             >
               <Filter size={18} />
             </button>
-
             <AnimatePresence>
               {isFilterOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute left-0 mt-3 w-48 bg-marketplace-card border border-marketplace-border rounded-2xl shadow-xl overflow-hidden py-2 z-50"
+                  className="absolute left-0 mt-3 w-52 bg-marketplace-card border border-marketplace-border rounded-2xl shadow-2xl overflow-hidden py-2 z-50"
                 >
                   {roles.map((role) => (
                     <button
@@ -199,15 +234,15 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
                         setActiveFilter(role);
                         setIsFilterOpen(false);
                       }}
-                      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-marketplace-card-hover transition-colors cursor-pointer"
+                      className={`w-full flex items-center justify-between px-5 py-3 rounded-xl transition-colors cursor-pointer text-base font-bold ${
+                        activeFilter === role
+                          ? "bg-marketplace-accent/10 text-marketplace-accent"
+                          : "hover:bg-marketplace-card-hover text-marketplace-text-secondary"
+                      }`}
                     >
-                      <span
-                        className={`text-sm font-bold ${activeFilter === role ? "text-marketplace-accent" : "text-marketplace-text-secondary"}`}
-                      >
-                        {role}
-                      </span>
+                      <span>{role}</span>
                       {activeFilter === role && (
-                        <Check size={14} className="text-marketplace-accent" />
+                        <Check size={16} className="text-marketplace-accent" />
                       )}
                     </button>
                   ))}
@@ -246,43 +281,13 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
                   user={user}
                   onEdit={handleEdit}
                   onDelete={handleDeletePrompt}
+                  adminCount={adminCount}
+                  currentUserId={currentUserId}
                 />
               ))}
             </tbody>
           </table>
         </div>
-        {visibleCount < filteredUsers.length && (
-          <div ref={sentinelRef} className="flex justify-center py-6">
-            <span className="text-xs text-marketplace-text-secondary font-bold animate-pulse">
-              جاري تحميل المزيد...
-            </span>
-          </div>
-        )}
-        {filteredUsers.length > 0 && (
-          <div className="text-center py-3">
-            <span className="text-xs text-marketplace-text-secondary">
-              عرض {Math.min(visibleCount, filteredUsers.length)} من{" "}
-              {filteredUsers.length}
-            </span>
-          </div>
-        )}
-        {filteredUsers.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="p-20 text-center"
-          >
-            <div className="w-20 h-20 bg-marketplace-bg rounded-full flex items-center justify-center mx-auto mb-4 border border-marketplace-border">
-              <Search
-                size={32}
-                className="text-marketplace-text-secondary opacity-20"
-              />
-            </div>
-            <h3 className="text-marketplace-text-primary font-bold text-lg">
-              لم يتم العثور على نتائج
-            </h3>
-          </motion.div>
-        )}
       </div>
 
       <UserModal
@@ -291,6 +296,7 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
         user={selectedUser}
         onSuccess={refreshData}
       />
+
       <ConfirmDeleteModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
@@ -302,43 +308,42 @@ export function UsersTab({ data: initialData }: { data: any[] }) {
     </div>
   );
 }
+
 function UserRow({
   user,
   onEdit,
   onDelete,
+  adminCount,
+  currentUserId,
 }: {
   user: any;
   onEdit: (u: any) => void;
   onDelete: (u: any) => void;
+  adminCount: number;
+  currentUserId: string | null;
 }) {
-  const actions = buildUserActions(user, onEdit, onDelete);
+  const isAdmin = user.role === "admin" || user.role === "مدير";
+  const isSelf = currentUserId === user.id;
 
-  // 1. Fix naming: Supabase uses full_name, Table might use name
+  // IMPORTANT: We pass false to isLastAdmin inside buildUserActions
+  // ONLY if you want the button to be clickable so our toast logic works.
+  // If buildUserActions makes the button 'disabled', the toast won't show.
+  const actions = buildUserActions(user, onEdit, onDelete, {
+    isLastAdmin: false, // Set to false to ensure the button remains clickable for the toast
+    isSelf,
+  });
+
   const displayName = user.full_name || user.name || "—";
   const displayEmail = user.email || "—";
   const displayPhone = user.phone || "-----";
-
-  // 2. Fix naming: Supabase uses created_at, not date
-  const rawDate = user.created_at || user.date;
-  const displayDate = rawDate
-    ? new Date(rawDate).toLocaleDateString("ar-EG", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : "—";
-
-  // 3. Fix Status: Check for Boolean or the Arabic string "نشط"
   const isActive = user.status === true || user.status === "نشط";
-  const displayStatus = isActive ? "نشط" : "غير نشط";
 
-  // 4. Role Translation
   const roleMap: Record<string, string> = {
     seller: "تاجر",
     admin: "مدير",
     guest: "ضيف",
     buyer: "مشتري",
-    تاجر: "تاجر", // Handle cases where data is already translated
+    تاجر: "تاجر",
     مدير: "مدير",
     مشتري: "مشتري",
   };
@@ -370,13 +375,7 @@ function UserRow({
       </td>
       <td className="px-8 py-5">
         <div
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-            user.role === "seller" || user.role === "تاجر"
-              ? "bg-marketplace-accent/5 border-marketplace-accent/20 text-marketplace-accent"
-              : user.role === "admin" || user.role === "مدير"
-                ? "bg-purple-500/5 border-purple-500/20 text-purple-500"
-                : "bg-primary/5 border-primary/20 text-marketplace-text-primary"
-          }`}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${isAdmin ? "bg-purple-500/5 border-purple-500/20 text-purple-500" : "bg-primary/5 border-primary/20 text-marketplace-text-primary"}`}
         >
           <ShieldCheck size={12} />
           {displayRole}
@@ -384,19 +383,20 @@ function UserRow({
       </td>
       <td className="px-8 py-5">
         <div className="flex items-center gap-2">
-          {/* Dynamic dot color based on status */}
           <div
-            className={`w-2 h-2 rounded-full ${isActive ? "animate-pulse bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-gray-400"}`}
+            className={`w-2 h-2 rounded-full ${isActive ? "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-gray-400"}`}
           />
           <span className="text-sm font-bold text-marketplace-text-primary">
-            {displayStatus}
+            {isActive ? "نشط" : "غير نشط"}
           </span>
         </div>
       </td>
       <td className="px-8 py-5">
         <div className="flex items-center gap-2 text-marketplace-text-secondary text-sm font-medium">
           <Calendar size={14} />
-          {displayDate}
+          {user.created_at
+            ? new Date(user.created_at).toLocaleDateString("ar-EG")
+            : "—"}
         </div>
       </td>
       <td className="px-8 py-5 text-left">

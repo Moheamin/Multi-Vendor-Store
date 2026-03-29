@@ -2,10 +2,7 @@
 import { supabase } from "../supabase/client";
 
 export async function getProducts(storeId?: string, categoryId?: number) {
-  let query = supabase
-    .from("products")
-    .select("*, stores(name, logo_url)")
-    .eq("is_deleted", false);
+  let query = supabase.from("products").select("*, stores(name, logo_url)");
 
   if (storeId) query = query.eq("store_id", storeId);
   if (categoryId) query = query.eq("category_id", categoryId);
@@ -50,7 +47,7 @@ export async function updateProduct(
 export async function deleteProduct(productId: string) {
   const { error } = await supabase
     .from("products")
-    .update({ is_deleted: true })
+    .delete()
     .eq("id", productId);
 
   if (error) throw new Error(error.message);
@@ -61,7 +58,6 @@ export async function getProduct(id: string) {
     .from("products")
     .select("*, stores(*)")
     .eq("id", id)
-    .eq("is_deleted", false)
     .single();
   if (error || !data) {
     throw new Error("Product not found");

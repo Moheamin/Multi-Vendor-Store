@@ -7,7 +7,6 @@ export async function getAdminUsers() {
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("is_deleted", false)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
@@ -42,6 +41,8 @@ export async function adminCreateUser(userData: {
     .insert([
       {
         full_name: userData.full_name,
+        phone: userData.phone || "",
+        email: userData.email,
         role: userData.role || "buyer",
         created_at: new Date().toISOString(),
       },
@@ -52,24 +53,39 @@ export async function adminCreateUser(userData: {
   return data;
 }
 
+// Permanently delete user from both profiles and auth tables
 export async function adminDeleteUser(userId: string) {
   if (!userId) throw new Error("معرّف المستخدم مطلوب");
-  const { data, error } = await supabase
+  // 1. Delete from profiles
+  const { error: profileError } = await supabase
     .from("profiles")
-    .update({ is_deleted: true })
-    .eq("id", userId)
-    .select();
-  if (error) throw new Error(error.message);
-  if (!data || data.length === 0) throw new Error("لم يتم العثور على المستخدم");
-  return data;
+    .delete()
+    .eq("id", userId);
+  if (profileError) throw new Error(profileError.message);
+
+  // 2. Delete from auth.users (requires service_role key, only works server-side)
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users/${userId}`,
+    {
+      method: "DELETE",
+      headers: {
+        apiKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "فشل حذف المستخدم من جدول auth");
+  }
+  return { success: true };
 }
 
 export async function getAvailableOwners() {
   const { data, error } = await supabase
     .from("profiles")
     .select("id, full_name")
-    .in("role", ["buyer", "seller", "admin"])
-    .eq("is_deleted", false);
+    .in("role", ["buyer", "seller", "admin"]);
   if (error) throw new Error(error.message);
   return data || [];
 }
@@ -240,7 +256,6 @@ export async function getAdminProducts() {
   const { data, error } = await supabase
     .from("products")
     .select(`*, stores (id, name), categories (id, name)`)
-    .eq("is_deleted", false)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data || [];

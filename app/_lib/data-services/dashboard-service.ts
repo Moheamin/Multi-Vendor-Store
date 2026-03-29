@@ -13,8 +13,7 @@ export async function getDashboardStats() {
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("is_deleted", false),
+      .select("*", { count: "exact", head: true }),
     supabase
       .from("stores")
       .select("*", { count: "exact", head: true })
@@ -186,7 +185,6 @@ export async function getRecentUsers(limit = 5) {
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("is_deleted", false)
     .order("created_at", { ascending: false })
     .limit(limit);
 

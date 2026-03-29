@@ -96,8 +96,7 @@ export async function getTotalCounts() {
     supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
-      .in("role", ["seller", "admin"])
-      .eq("is_deleted", false),
+      .in("role", ["seller", "admin"]),
   ]);
   return {
     stores: stores.count || 0,

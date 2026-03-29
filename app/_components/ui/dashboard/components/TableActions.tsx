@@ -8,6 +8,7 @@ export interface Action {
   icon: React.ReactNode;
   onClick: () => void;
   variant?: "default" | "danger" | "success";
+  disabled?: boolean; // Added disabled property
 }
 
 interface TableActionsProps {
@@ -26,17 +27,24 @@ export function TableActions({ actions }: TableActionsProps) {
         {actions.map((action, i) => (
           <button
             key={i}
+            disabled={action.disabled}
             onClick={(e) => {
               e.stopPropagation();
-              action.onClick();
+              if (!action.disabled) action.onClick();
             }}
             title={action.label}
-            className={`w-8 h-8 cursor-pointer rounded-xl flex items-center justify-center transition-all border ${
-              action.variant === "danger"
+            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${
+              action.disabled
+                ? "opacity-40 cursor-not-allowed bg-gray-500/10 border-gray-500/20 text-gray-500"
+                : "cursor-pointer"
+            } ${
+              !action.disabled && action.variant === "danger"
                 ? "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20"
-                : action.variant === "success"
+                : !action.disabled && action.variant === "success"
                   ? "bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20"
-                  : "bg-marketplace-bg border-marketplace-border text-marketplace-text-secondary hover:text-marketplace-accent hover:border-marketplace-accent/30"
+                  : !action.disabled
+                    ? "bg-marketplace-bg border-marketplace-border text-marketplace-text-secondary hover:text-marketplace-accent hover:border-marketplace-accent/30"
+                    : ""
             }`}
           >
             {action.icon}
@@ -47,18 +55,32 @@ export function TableActions({ actions }: TableActionsProps) {
   );
 }
 
+/**
+ * UPDATED: Simplified to let UsersTab handle the "Last Admin" toast logic.
+ * This ensures clicking always triggers the parent's handleDeletePrompt.
+ */
 export function buildUserActions(
   user: any,
   onEdit: (user: any) => void,
   onDelete: (user: any) => void,
+  options?: { isLastAdmin?: boolean; isSelf?: boolean },
 ): Action[] {
   return [
-    { label: "تعديل", icon: <Pencil size={14} />, onClick: () => onEdit(user) },
+    {
+      label: "تعديل",
+      icon: <Pencil size={14} />,
+      onClick: () => onEdit(user),
+    },
     {
       label: "حذف",
       icon: <Trash2 size={14} />,
+      // We always call onDelete. The UsersTab component's
+      // handleDeletePrompt already contains the toast logic.
       onClick: () => onDelete(user),
       variant: "danger",
+      // We don't disable it here because we want the user
+      // to be able to click it and see the "Why" toast.
+      disabled: false,
     },
   ];
 }
@@ -69,7 +91,6 @@ export function buildStoreActions(
   onDelete: (store: any) => void,
   onToggleActive: (store: any) => void,
 ): Action[] {
-  // Use 'isActive' instead of 'is_active' to match your row mapping
   const active = store.isActive;
 
   return [
@@ -82,7 +103,6 @@ export function buildStoreActions(
       label: active ? "تعطيل" : "تفعيل",
       icon: active ? <XCircle size={14} /> : <CheckCircle size={14} />,
       onClick: () => onToggleActive(store),
-      // This will now correctly toggle the variant color
       variant: active ? "danger" : "success",
     },
     {
@@ -113,8 +133,3 @@ export function buildProductActions(
     },
   ];
 }
-
-// Legacy (keep for backward compat if needed)
-export const userActions: Action[] = [];
-export const storeActions: Action[] = [];
-export const productActions: Action[] = [];
