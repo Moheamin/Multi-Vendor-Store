@@ -70,6 +70,9 @@ export async function getStores(
 export async function updateStoreData(storeId: string, updates: any) {
   if (!storeId) throw new Error("Store ID is missing");
 
+  if (updates.name) updates.name = updates.name.trim();
+  if (updates.slug) updates.slug = updates.slug.trim();
+
   const { data, error } = await supabase
     .from("stores")
     .update(updates)

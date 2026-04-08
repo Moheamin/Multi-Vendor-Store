@@ -11,9 +11,7 @@ export async function getDashboardStats() {
     { count: productsCount },
     { data: revenueData },
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true }),
+    supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase
       .from("stores")
       .select("*", { count: "exact", head: true })
@@ -288,16 +286,17 @@ export async function getAdminProducts() {
 export async function getStorePageData(storeId: string) {
   const supabase = await supabaseCookiesServer();
 
-  if (!storeId) return { store: null, products: [] };
+  const normalizedId = decodeURIComponent(storeId).trim();
+  if (!normalizedId) return { store: null, products: [] };
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      storeId,
+      normalizedId,
     );
 
   const { data: store, error: storeError } = await supabase
     .from("stores")
     .select("*")
-    .eq(isUuid ? "id" : "slug", storeId)
+    .eq(isUuid ? "id" : "slug", normalizedId)
     .eq("is_deleted", false)
     .maybeSingle();
 

@@ -369,7 +369,7 @@ export function StoreModal({
                     type="text"
                     value={formData.slug}
                     onChange={(e) =>
-                      setFormData({ ...formData, slug: e.target.value })
+                      setFormData({ ...formData, slug: e.target.value.trim() })
                     }
                     className="w-full bg-marketplace-text-secondary/5 border border-marketplace-border rounded-2xl py-3.5 pr-4 pl-10 text-marketplace-text-primary font-bold text-left outline-none focus:border-marketplace-accent/50"
                   />

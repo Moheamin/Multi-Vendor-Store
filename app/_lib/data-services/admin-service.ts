@@ -122,8 +122,8 @@ export async function updateStore(storeId: string, updates: any) {
     .from("stores")
     .update({
       owner_id: updates.owner_id || null,
-      name: updates.name,
-      slug: updates.slug,
+      name: updates.name?.trim(),
+      slug: updates.slug?.trim(),
       phone: updates.phone,
       logo_url: updates.logo_url,
       monthly_hosting_fee: parseFloat(updates.monthly_hosting_fee),
@@ -196,10 +196,15 @@ export async function adminUpsertStore(
   storeId: string | undefined,
   storeData: any,
 ) {
+  const sanitized = {
+    ...storeData,
+    name: storeData.name?.trim(),
+    slug: storeData.slug?.trim(),
+  };
   if (storeId) {
     const { data, error } = await supabase
       .from("stores")
-      .update(storeData)
+      .update(sanitized)
       .eq("id", storeId)
       .select()
       .single();
@@ -208,7 +213,7 @@ export async function adminUpsertStore(
   } else {
     const { data, error } = await supabase
       .from("stores")
-      .insert([storeData])
+      .insert([sanitized])
       .select()
       .single();
     if (error) throw new Error(error.message);
