@@ -1,26 +1,26 @@
 "use client";
 
-import { loadHeic2any } from "@/app/_components/image/loadHeic2any";
-import { resizeImageForStorage } from "@/app/_components/image/resizeImageForStorage";
+import {
+  ImageUploadGrid,
+  type PendingImage,
+} from "@/app/_components/image/ImageUploadGrid";
 import { getCategoriesForSelect } from "@/app/_lib/data-services/admin-service";
 import {
   createProduct,
-  uploadProductImage,
+  uploadProductImages,
 } from "@/app/_lib/data-services/products-service";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlignLeft,
-  Camera,
   ChevronDown,
   DollarSign,
   Hash,
   Loader2,
   Package,
   Tag,
-  Upload,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 
 type AddProductModalProps = {
@@ -38,9 +38,10 @@ export function AddProductModal({
 }: AddProductModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Multi-image state ──────────────────────────────────────────────────────
+  const [existingImages] = useState<string[]>([]); // always empty for "add"
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
 
   const [form, setForm] = useState({
     name: "",
@@ -50,9 +51,10 @@ export function AddProductModal({
     category_id: "",
   });
 
-  // Load categories & reset form when modal opens
+  // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
+
     async function init() {
       try {
         const categoriesData = await getCategoriesForSelect();
@@ -61,8 +63,9 @@ export function AddProductModal({
         toast.error("فشل تحميل الفئات");
       }
     }
+
     init();
-    // Reset every open
+    // Reset on each open
     setForm({
       name: "",
       price: "",
@@ -70,59 +73,27 @@ export function AddProductModal({
       stock_quantity: "",
       category_id: "",
     });
-    setPreviewUrl("");
-    setImageFile(null);
+    setPendingImages([]);
   }, [isOpen]);
 
-  // Escape key to close
+  // Escape key
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
+    const handle = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
   }, [onClose]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    const toastId = toast.loading("جاري معالجة الصورة...");
-    try {
-      let processedFile = file;
-
-      // 1. Handle HEIC (iPhone)
-      if (
-        file.type === "image/heic" ||
-        file.name.toLowerCase().endsWith(".heic")
-      ) {
-        const heic2any = await loadHeic2any();
-        const convertedBlob = await heic2any({
-          blob: file,
-          toType: "image/jpeg",
-        });
-        processedFile = new File(
-          Array.isArray(convertedBlob) ? convertedBlob : [convertedBlob],
-          file.name.replace(/\.[^.]+$/, ".jpg"),
-          { type: "image/jpeg" },
-        );
-      }
-
-      // 2. Resize & convert to WebP
-      const finalFile = await resizeImageForStorage(processedFile, 2000);
-      setImageFile(finalFile);
-      setPreviewUrl(URL.createObjectURL(finalFile));
-      toast.success("تمت المعالجة بنجاح", { id: toastId });
-    } catch {
-      toast.error("فشل في معالجة الصورة", { id: toastId });
-    } finally {
-      setIsLoading(false);
-    }
+  // ── Remove existing image (N/A in add flow, but required by ImageUploadGrid) ──
+  const handleRemoveExisting = (_url: string) => {
+    // No-op for add flow — existingImages is always empty
   };
 
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!form.name || !form.price) {
       toast.error("يرجى ملء الحقول المطلوبة");
       return;
@@ -138,11 +109,7 @@ export function AddProductModal({
 
     setIsLoading(true);
     try {
-      let imageUrl: string | null = null;
-      if (imageFile) {
-        imageUrl = await uploadProductImage(storeId, imageFile);
-      }
-
+      // 1. Create the product first (no images yet)
       const newProduct = await createProduct({
         name: form.name,
         price: parseFloat(form.price) || 0,
@@ -150,8 +117,39 @@ export function AddProductModal({
         stock_quantity: Number(form.stock_quantity) || 0,
         category_id: form.category_id ? Number(form.category_id) : null,
         store_id: storeId,
-        image_url: imageUrl || undefined,
+        image_url: [],
       });
+
+      // 2. Upload images (now we have the productId)
+      let imageUrls: string[] = [];
+      if (pendingImages.length > 0) {
+        imageUrls = await uploadProductImages(
+          storeId,
+          pendingImages.map((p) => p.file),
+          newProduct.id,
+        );
+      }
+
+      // 3. Patch the product with the image URLs
+      if (imageUrls.length > 0) {
+        const { data: updatedProduct, error } = await (
+          await import("@/app/_lib/supabase/client")
+        ).supabase
+          .from("products")
+          .update({
+            image_url: imageUrls,
+          })
+          .eq("id", newProduct.id)
+          .select()
+          .single();
+
+        if (!error && updatedProduct) {
+          toast.success("تمت إضافة المنتج بنجاح");
+          onProductAdded(updatedProduct);
+          onClose();
+          return;
+        }
+      }
 
       toast.success("تمت إضافة المنتج بنجاح");
       onProductAdded(newProduct);
@@ -167,7 +165,7 @@ export function AddProductModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -205,67 +203,16 @@ export function AddProductModal({
           {/* ── Form Body ── */}
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar max-h-[70vh]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Image Upload */}
-              <div className="md:col-span-2 space-y-3">
-                <label className="text-[11px] font-bold text-marketplace-text-secondary uppercase tracking-widest px-1">
-                  صورة المنتج
-                </label>
-                <div
-                  onClick={() => !isLoading && fileInputRef.current?.click()}
-                  className={`relative h-56 w-full border-2 border-dashed border-marketplace-border rounded-[2.5rem] overflow-hidden group bg-marketplace-bg hover:border-marketplace-accent/40 transition-all cursor-pointer flex items-center justify-center ${
-                    isLoading ? "opacity-50 cursor-wait" : ""
-                  }`}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*,image/heic"
-                    onChange={handleFileChange}
-                  />
-                  {isLoading && (
-                    <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 rounded-[2.5rem]">
-                      <Loader2
-                        className="text-marketplace-accent animate-spin"
-                        size={32}
-                      />
-                      <span className="text-[11px] font-black text-white tracking-wide">
-                        جاري معالجة الصورة...
-                      </span>
-                    </div>
-                  )}
-                  {previewUrl ? (
-                    <>
-                      <img
-                        src={previewUrl}
-                        alt="Product preview"
-                        className="absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-1000 group-hover:scale-110"
-                      />
-                      {!isLoading && (
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
-                          <Camera
-                            className="text-marketplace-accent"
-                            size={28}
-                          />
-                          <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
-                            تغيير الصورة
-                          </span>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    !isLoading && (
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="p-4 bg-marketplace-card rounded-full border border-marketplace-border text-marketplace-text-secondary group-hover:text-marketplace-accent transition-colors">
-                          <Upload size={24} />
-                        </div>
-                        <span className="text-xs font-bold text-marketplace-text-secondary">
-                          اضغط لرفع صورة المنتج (يدعم صور الآيفون)
-                        </span>
-                      </div>
-                    )
-                  )}
-                </div>
+              {/* ── Multi-image upload ── */}
+              <div className="md:col-span-2">
+                <ImageUploadGrid
+                  existingImages={existingImages}
+                  pendingImages={pendingImages}
+                  onPendingChange={setPendingImages}
+                  onRemoveExisting={handleRemoveExisting}
+                  maxImages={6}
+                  disabled={isLoading}
+                />
               </div>
 
               {/* Name */}
@@ -343,7 +290,6 @@ export function AddProductModal({
                     className="w-full bg-marketplace-bg border border-marketplace-border rounded-2xl py-3.5 pr-11 pl-4 text-marketplace-text-primary font-bold outline-none focus:border-marketplace-accent/50 transition-all"
                   />
                 </div>
-                {/* Live stock status hint */}
                 {form.stock_quantity !== "" && (
                   <p
                     className={`text-[11px] font-bold px-1 ${
@@ -406,7 +352,7 @@ export function AddProductModal({
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
-                  className="w-full bg-marketplace-bg border border-marketplace-border rounded-[1.5rem] py-4 px-5 text-marketplace-text-primary font-medium outline-none resize-none focus:border-marketplace-accent/50 transition-all"
+                  className="w-full bg-marketplace-bg border border-marketplace-border rounded-3xl py-4 px-5 text-marketplace-text-primary font-medium outline-none resize-none focus:border-marketplace-accent/50 transition-all"
                 />
               </div>
             </div>
@@ -423,7 +369,7 @@ export function AddProductModal({
             <button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="min-w-[180px] flex cursor-pointer items-center justify-center gap-3 px-10 py-3 bg-marketplace-accent text-white rounded-xl font-black shadow-lg shadow-marketplace-accent/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+              className="min-w-45 flex cursor-pointer items-center justify-center gap-3 px-10 py-3 bg-marketplace-accent text-white rounded-xl font-black shadow-lg shadow-marketplace-accent/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
             >
               {isLoading ? (
                 <Loader2 size={20} className="animate-spin" />

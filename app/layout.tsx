@@ -2,6 +2,7 @@ import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "./_lib/theme-provider";
 import { NavigationProgress } from "./_components/NavigationProgress";
 import "./styles/globals.css";
+
 import type { Metadata, Viewport } from "next";
 export const metadata: Metadata = {
   // Basic Info

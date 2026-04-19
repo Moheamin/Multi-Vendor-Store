@@ -51,7 +51,9 @@ export function Filters({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onFilterChange(filter.id)}
-                className={getButtonClass(activeFilter === filter.id)}
+                className={
+                  getButtonClass(activeFilter === filter.id) + " cursor-pointer"
+                }
               >
                 {/* Icon naturally appears to the right of text in RTL flex */}
                 <Icon className="w-4 h-4" />
@@ -78,7 +80,7 @@ export function Filters({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => onCategoryChange("all")}
-              className={`flex-shrink-0 ${getButtonClass(activeCategory === "all")}`}
+              className={`flex-shrink-0 ${getButtonClass(activeCategory === "all")} cursor-pointer`}
             >
               الكل
             </motion.button>
@@ -89,7 +91,7 @@ export function Filters({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onCategoryChange(category)}
-                className={`flex-shrink-0 ${getButtonClass(activeCategory === category)}`}
+                className={`flex-shrink-0 ${getButtonClass(activeCategory === category)} cursor-pointer`}
               >
                 {category}
               </motion.button>

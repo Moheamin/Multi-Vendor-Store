@@ -311,3 +311,22 @@ export async function getStorePageData(storeId: string) {
 
   return { store, products: products || [] };
 }
+
+// app/_lib/data-services/dashboard-service.ts
+
+export async function updateOrderStatus(
+  id: string,
+  status: "verified_sold" | "pending_verification" | "verified_not_sold",
+) {
+  const supabase = await supabaseCookiesServer();
+
+  const { data, error } = await supabase
+    .from("orders")
+    .update({ status })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}

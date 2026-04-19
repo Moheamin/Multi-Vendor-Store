@@ -1,5 +1,6 @@
 "use client";
 
+import { ImageSlider } from "@/app/_components/image/ImageSlider";
 import { AlertTriangle, Ban, Flame, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
@@ -11,7 +12,7 @@ interface ProductCardProps {
     id: string;
     name: string;
     price: number;
-    image_url?: string;
+    image_url?: string[];
     category?: string;
     stock_quantity?: number;
   };
@@ -26,14 +27,22 @@ export function ProductCard({
   isOwner = false,
   onDelete,
 }: ProductCardProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
   const stock = product.stock_quantity ?? null;
   const isOutOfStock = stock !== null && stock === 0;
   const isLastUnit = stock !== null && stock === 1;
   const isLowStock =
     stock !== null && stock > 1 && stock <= LOW_STOCK_THRESHOLD;
+
+  // Resolve images: prefer the array, fall back to legacy image_url
+  const images: string[] =
+    product.image_url && Array.isArray(product.image_url)
+      ? product.image_url
+      : product.image_url
+        ? [product.image_url]
+        : [];
 
   return (
     <>
@@ -52,49 +61,50 @@ export function ProductCard({
           }
         `}
       >
-        {/* ── Image ── */}
+        {/* ── Image / Slider ── */}
         <div className="relative aspect-square overflow-hidden m-2 rounded-2xl bg-muted/10">
-          {product.image_url ? (
+          {images.length > 0 ? (
             <>
-              {/* Loading Skeleton */}
-              <AnimatePresence>
-                {!isLoaded && (
-                  <motion.div
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-marketplace-accent/5 animate-pulse flex items-center justify-center"
+              {/* Out-of-stock overlay sits above the slider */}
+              {isOutOfStock && (
+                <div className="absolute inset-0 z-20 bg-marketplace-bg/60 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
+                  <Ban
+                    size={32}
+                    className="text-marketplace-text-secondary/50"
                   />
-                )}
-              </AnimatePresence>
+                  <span className="text-xs font-black text-marketplace-text-secondary/70 uppercase tracking-widest">
+                    نفدت الكمية
+                  </span>
+                </div>
+              )}
 
-              <motion.img
-                src={product.image_url}
+              <ImageSlider
+                image_url={images}
                 alt={product.name}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: isLoaded ? 1 : 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                onLoad={() => setIsLoaded(true)}
-                className={`w-full h-full object-cover transition-transform duration-500 ${
-                  !isOutOfStock && isLoaded ? "group-hover:scale-110" : ""
-                }`}
+                objectFit="cover"
+                showDots={images.length > 1}
               />
+
+              {/* Hover colour tint */}
+              {!isOutOfStock && (
+                <div
+                  className={`absolute inset-0 z-10 pointer-events-none transition-colors duration-300 ${
+                    isLastUnit
+                      ? "bg-rose-400/0 group-hover:bg-rose-400/5"
+                      : isLowStock
+                        ? "bg-amber-400/0 group-hover:bg-amber-400/5"
+                        : "bg-marketplace-accent/0 group-hover:bg-marketplace-accent/5"
+                  }`}
+                />
+              )}
             </>
           ) : (
             <div className="w-full h-full bg-muted/10 flex items-center justify-center" />
           )}
 
-          {/* Out of stock overlay */}
-          {isOutOfStock && (
-            <div className="absolute inset-0 bg-marketplace-bg/60 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
-              <Ban size={32} className="text-marketplace-text-secondary/50" />
-              <span className="text-xs font-black text-marketplace-text-secondary/70 uppercase tracking-widest">
-                نفدت الكمية
-              </span>
-            </div>
-          )}
-
           {/* Last unit badge */}
           {isLastUnit && (
-            <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-rose-500/90 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg z-10 animate-pulse">
+            <div className="absolute top-2 right-2 z-30 flex items-center gap-1.5 bg-rose-500/90 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg animate-pulse">
               <span>{`${stock} متبقية فقط`}</span>
               <Flame size={11} className="shrink-0" />
             </div>
@@ -102,32 +112,22 @@ export function ProductCard({
 
           {/* Low stock badge */}
           {isLowStock && !isOutOfStock && (
-            <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg z-10">
+            <div className="absolute top-2 right-2 z-30 flex items-center gap-1.5 bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg">
               <AlertTriangle size={11} className="shrink-0" />
               <span>{`${stock} متبقية فقط`}</span>
             </div>
           )}
 
-          {/* Owner: show stock count badge (always) */}
+          {/* Owner: stock count (hover, normal stock) */}
           {isOwner &&
             !isLowStock &&
             !isLastUnit &&
             !isOutOfStock &&
             stock !== null && (
-              <div className="absolute top-2 right-2 bg-marketplace-card/80 backdrop-blur-sm border border-marketplace-border text-marketplace-text-secondary text-[10px] font-bold px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10">
+              <div className="absolute top-2 right-2 z-30 bg-marketplace-card/80 backdrop-blur-sm border border-marketplace-border text-marketplace-text-secondary text-[10px] font-bold px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                 {stock} في المخزن
               </div>
             )}
-
-          <div
-            className={`absolute inset-0 transition-colors duration-300 ${
-              isLastUnit
-                ? "bg-rose-400/0 group-hover:bg-rose-400/5"
-                : isLowStock
-                  ? "bg-amber-400/0 group-hover:bg-amber-400/5"
-                  : "bg-marketplace-accent/0 group-hover:bg-marketplace-accent/5"
-            }`}
-          />
         </div>
 
         {/* ── Details ── */}
@@ -184,11 +184,15 @@ export function ProductCard({
                 غير متاح
               </span>
             )}
+
             {/* Owner: Delete button */}
             {isOwner && onDelete && (
               <button
                 title="حذف المنتج"
-                onClick={() => setShowDeleteModal(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteModal(true);
+                }}
                 className="ml-2 p-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
               >
                 <Trash2 size={18} />

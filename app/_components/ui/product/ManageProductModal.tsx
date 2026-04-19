@@ -1,16 +1,18 @@
 "use client";
 
-import { loadHeic2any } from "@/app/_components/image/loadHeic2any";
-import { resizeImageForStorage } from "@/app/_components/image/resizeImageForStorage";
+import {
+  ImageUploadGrid,
+  type PendingImage,
+} from "@/app/_components/image/ImageUploadGrid";
 import { getCategoriesForSelect } from "@/app/_lib/data-services/admin-service";
 import {
+  deleteProductImage,
   updateProduct,
-  uploadProductImage,
+  uploadProductImages,
 } from "@/app/_lib/data-services/products-service";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlignLeft,
-  Camera,
   Check,
   ChevronDown,
   DollarSign,
@@ -18,10 +20,9 @@ import {
   Loader2,
   Package,
   Tag,
-  Upload,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 
 interface ManageProductModalProps {
@@ -41,7 +42,12 @@ export function ManageProductModal({
 }: ManageProductModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Multi-image state ──────────────────────────────────────────────────────
+  // existingImages = URLs already in the database (saved)
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  // pendingImages = local files not yet uploaded
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
 
   const [form, setForm] = useState({
     name: "",
@@ -49,14 +55,12 @@ export function ManageProductModal({
     description: "",
     stock_quantity: "",
     category_id: "",
-    image_url: "",
   });
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-
+  // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen || !product) return;
+
     async function init() {
       try {
         const categoriesData = await getCategoriesForSelect();
@@ -75,53 +79,43 @@ export function ManageProductModal({
           description: product.description || "",
           stock_quantity: String(product.stock_quantity ?? product.stock ?? 0),
           category_id: matchedCategory?.id || "",
-          image_url: product.image_url || "",
         });
-        setPreviewUrl(product.image_url || "");
-        setSelectedFile(null);
+
+        // Populate existing images: prefer the image_url[] array, fall back to image_url
+        const imgs: string[] =
+          product.image_url && product.image_url.length > 0
+            ? Array.isArray(product.image_url)
+              ? product.image_url
+              : [product.image_url]
+            : [];
+
+        setExistingImages(imgs);
+        setPendingImages([]);
       } catch {
         toast.error("فشل تحميل بيانات المنتج");
       }
     }
+
     init();
   }, [product, isOpen]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    const toastId = toast.loading("جاري معالجة الصورة...");
+  // ── Delete a single existing image from storage + state ───────────────────
+  const handleRemoveExisting = async (url: string) => {
+    // Optimistic UI update first
+    setExistingImages((prev) => prev.filter((u) => u !== url));
     try {
-      let processedFile = file;
-      if (
-        file.type === "image/heic" ||
-        file.name.toLowerCase().endsWith(".heic")
-      ) {
-        const heic2any = await loadHeic2any();
-        const convertedBlob = await heic2any({
-          blob: file,
-          toType: "image/jpeg",
-        });
-        processedFile = new File(
-          Array.isArray(convertedBlob) ? convertedBlob : [convertedBlob],
-          file.name.replace(/\.[^.]+$/, ".jpg"),
-          { type: "image/jpeg" },
-        );
-      }
-      const finalFile = await resizeImageForStorage(processedFile);
-      setSelectedFile(finalFile);
-      setPreviewUrl(URL.createObjectURL(finalFile));
-      toast.success("تمت المعالجة بنجاح", { id: toastId });
+      await deleteProductImage(url);
     } catch {
-      toast.error("فشل في معالجة الصورة", { id: toastId });
-    } finally {
-      setIsLoading(false);
+      // Revert on failure
+      setExistingImages((prev) => [...prev, url]);
+      toast.error("فشل حذف الصورة، حاول مرة أخرى");
     }
   };
 
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!form.name || !form.price) {
       toast.error("يرجى ملء الحقول المطلوبة");
       return;
@@ -134,27 +128,31 @@ export function ManageProductModal({
       toast.error("الكمية يجب أن تكون عدداً صحيحاً بدون فواصل عشرية");
       return;
     }
+
     setIsLoading(true);
     try {
-      let finalImageUrl: string | null = form.image_url;
-      if (selectedFile) {
-        finalImageUrl = await uploadProductImage(
+      // Upload new images
+      let newUrls: string[] = [];
+      if (pendingImages.length > 0) {
+        newUrls = await uploadProductImages(
           storeId,
-          selectedFile,
+          pendingImages.map((p) => p.file),
           product.id,
         );
       }
 
-      const payload = {
+      // Merge existing (minus deleted) with newly uploaded
+      const allImages = [...existingImages, ...newUrls];
+
+      const updated = await updateProduct(product.id, {
         name: form.name,
         price: Number(form.price),
         description: form.description,
         stock_quantity: Number(form.stock_quantity) || 0,
         category_id: form.category_id ? Number(form.category_id) : null,
-        image_url: finalImageUrl ?? undefined,
-      };
+        image_url: allImages,
+      });
 
-      const updated = await updateProduct(product.id, payload);
       toast.success("تم التحديث بنجاح");
       onProductUpdated(updated);
       onClose();
@@ -169,7 +167,7 @@ export function ManageProductModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -177,12 +175,14 @@ export function ManageProductModal({
           onClick={onClose}
           className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         />
+
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className="relative w-full max-w-2xl bg-marketplace-card border border-marketplace-border rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
           dir="rtl"
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="px-8 py-6 border-b border-marketplace-border flex items-center justify-between bg-linear-to-l from-marketplace-accent/5 to-transparent">
@@ -203,65 +203,16 @@ export function ManageProductModal({
           {/* Form */}
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar max-h-[70vh]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Image */}
-              <div className="md:col-span-2 space-y-3">
-                <label className="text-[11px] font-bold text-marketplace-text-secondary uppercase tracking-widest px-1">
-                  صورة المنتج
-                </label>
-                <div
-                  onClick={() => !isLoading && fileInputRef.current?.click()}
-                  className={`relative h-56 w-full border-2 border-dashed border-marketplace-border rounded-[2.5rem] overflow-hidden group bg-marketplace-bg hover:border-marketplace-accent/40 transition-all cursor-pointer flex items-center justify-center ${isLoading ? "opacity-50 cursor-wait" : ""}`}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*,image/heic"
-                    onChange={handleFileChange}
-                  />
-                  {isLoading && (
-                    <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 rounded-[2.5rem]">
-                      <Loader2
-                        className="text-marketplace-accent animate-spin"
-                        size={32}
-                      />
-                      <span className="text-[11px] font-black text-white tracking-wide">
-                        جاري معالجة الصورة...
-                      </span>
-                    </div>
-                  )}
-                  {previewUrl ? (
-                    <>
-                      <img
-                        src={previewUrl}
-                        alt="Product"
-                        className="absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-1000 group-hover:scale-110"
-                      />
-                      {!isLoading && (
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px]">
-                          <Camera
-                            className="text-marketplace-accent"
-                            size={28}
-                          />
-                          <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
-                            تغيير الصورة
-                          </span>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    !isLoading && (
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="p-4 bg-marketplace-card rounded-full border border-marketplace-border text-marketplace-text-secondary group-hover:text-marketplace-accent transition-colors">
-                          <Upload size={24} />
-                        </div>
-                        <span className="text-xs font-bold text-marketplace-text-secondary">
-                          اضغط لرفع صورة المنتج
-                        </span>
-                      </div>
-                    )
-                  )}
-                </div>
+              {/* ── Multi-image upload ── */}
+              <div className="md:col-span-2">
+                <ImageUploadGrid
+                  existingImages={existingImages}
+                  pendingImages={pendingImages}
+                  onPendingChange={setPendingImages}
+                  onRemoveExisting={handleRemoveExisting}
+                  maxImages={6}
+                  disabled={isLoading}
+                />
               </div>
 
               {/* Name */}
@@ -301,8 +252,8 @@ export function ManageProductModal({
                     onChange={(e) =>
                       setForm({ ...form, price: e.target.value })
                     }
-                    className="w-full bg-marketplace-bg border border-marketplace-border rounded-2xl py-3.5 pr-11 pl-4 text-marketplace-text-primary font-black outline-none focus:border-marketplace-accent/50 transition-all"
                     min="0"
+                    className="w-full bg-marketplace-bg border border-marketplace-border rounded-2xl py-3.5 pr-11 pl-4 text-marketplace-text-primary font-black outline-none focus:border-marketplace-accent/50 transition-all"
                   />
                 </div>
               </div>
@@ -339,7 +290,6 @@ export function ManageProductModal({
                     className="w-full bg-marketplace-bg border border-marketplace-border rounded-2xl py-3.5 pr-11 pl-4 text-marketplace-text-primary font-bold outline-none focus:border-marketplace-accent/50 transition-all"
                   />
                 </div>
-                {/* Stock status hint */}
                 {form.stock_quantity !== "" && (
                   <p
                     className={`text-[11px] font-bold px-1 ${
@@ -402,7 +352,7 @@ export function ManageProductModal({
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
-                  className="w-full bg-marketplace-bg border border-marketplace-border rounded-[1.5rem] py-4 px-5 text-marketplace-text-primary font-medium outline-none resize-none focus:border-marketplace-accent/50 transition-all"
+                  className="w-full bg-marketplace-bg border border-marketplace-border rounded-3xl py-4 px-5 text-marketplace-text-primary font-medium outline-none resize-none focus:border-marketplace-accent/50 transition-all"
                 />
               </div>
             </div>
@@ -419,7 +369,7 @@ export function ManageProductModal({
             <button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="min-w-[180px] flex cursor-pointer items-center justify-center gap-3 px-10 py-3 bg-marketplace-accent text-white rounded-xl font-black shadow-lg shadow-marketplace-accent/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+              className="min-w-45 flex cursor-pointer items-center justify-center gap-3 px-10 py-3 bg-marketplace-accent text-white rounded-xl font-black shadow-lg shadow-marketplace-accent/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
             >
               {isLoading ? (
                 <Loader2 size={20} className="animate-spin" />
